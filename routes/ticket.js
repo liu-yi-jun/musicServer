@@ -46,4 +46,18 @@ router.post('/followTicket', async (req, res, next) => {
     }
 })
 
+router.get('/myStoreTicket', async (req, res, next) => {
+    try {
+        let { pageSize, pageIndex, userId } = req.query
+        let sql = `SELECT t2.*  FROM (select * from ticketstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN ticket t2 ON t1.ticketId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let ticket = await db.coreQuery(sql)
+        ticket.forEach(item => {
+            item.isStore = true
+        })
+        return res.json(util.success(ticket))
+    } catch (err) {
+        next(err)
+    }
+})
+
 module.exports = router;
