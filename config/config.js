@@ -2,7 +2,7 @@ const { resource } = require("../app");
 
 module.exports = {
     mysql: {
-        host: 'localhost',
+        host: '120.78.128.21',
         // host: 'localhost',
         user: 'root',
         password: 'root',
