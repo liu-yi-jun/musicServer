@@ -155,7 +155,7 @@ router.post('/livehouseStore', (req, res, next) => {
 
 })
 
-router.get('livehouseComment', async (req, res, next) => {
+router.get('/livehouseComment', async (req, res, next) => {
     try {
         let { pageSize, pageIndex, id } = req.query
         let commentArr = await db.queryComment(pageSize, pageIndex, 'livehouse', id)
