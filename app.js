@@ -25,6 +25,7 @@ var song = require('./routes/song');
 var inform = require('./routes/inform');
 var system = require('./routes/system');
 var performance = require('./routes/performance');
+var tap = require('./routes/tap');
 
 const schedule = require('node-schedule');
 const  scheduleCronstyle = ()=>{
@@ -70,6 +71,7 @@ app.use('/api/song', song);
 app.use('/api/inform', inform);
 app.use('/api/system', system);
 app.use('/api/performance', performance);
+app.use('/api/tap', tap);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

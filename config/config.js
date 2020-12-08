@@ -3,6 +3,7 @@ const { resource } = require("../app");
 module.exports = {
     mysql: {
         host: 'localhost',
+        // host: 'localhost',
         user: 'root',
         password: 'root',
         database: 'music',
