@@ -20,5 +20,60 @@ router.get('/searchTap', async (req, res, next) => {
         next(err)
     }
 })
+router.get('/getTapDetail', async (req, res, next) => {
+    try {
+        let { tapId, pageSize, pageIndex,userId } = req.query
+        let tap = await db.onlyQuery('tap', 'id', tapId)
+        let tapRecord = await db.paging('taprecord', pageSize, pageIndex, { tapId }, ['likes DESC'])
+        tapRecord = await db.isLike(tapRecord, 'taprecordlike', userId, 'taprecordId')
+        res.json(util.success({
+            tapDetail: tap[0],
+            tapRecord : tapRecord
+        }))
+    } catch (err) {
+        next(err)
+    }
+})
+
+
+router.post('/issueTapRecord', async (req, res, next) => {
+    try {
+        let params = req.body
+        params.releaseTime = Date.now()
+        let insertResult = await db.insert('taprecord', params)
+        let onlyQueryResult = await db.onlyQuery('taprecord', 'id', insertResult.insertId)
+        res.json(util.success(onlyQueryResult))
+    } catch (err) {
+        next(err)
+    }
+})
+
+router.post('/tapRecordLike', (req, res, next) => {
+    let relation = req.body.relation
+    let operate = req.body.operate
+    let data = {
+        mainTable: {
+            name: 'taprecord',
+            modify: 'likes',
+            id: relation.themeId
+        },
+        viceTable: {
+            name: 'taprecordlike',
+            relation: {
+                userId: relation.userId,
+                groupcardrecordId: relation.themeId
+            }
+        },
+        operate
+    }
+    db.operateLSF(data).then(result => {
+        res.json(util.success(result))
+    }).catch(err => next(err))
+
+})
+
+
+
+
 
 module.exports = router;
