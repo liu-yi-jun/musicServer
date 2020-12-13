@@ -183,5 +183,25 @@ router.get('/livehouseDetail', async (req, res, next) => {
     }
 })
 
+router.get('/myStorePerformance', async (req, res, next) => {
+    try {
+        let { pageSize, pageIndex, userId } = req.query
+        let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
+        let storeAlliance = await db.paging('alliancestore', pageSize, pageIndex, { userId }, ['id DESC'])
+        if (!storeAlliance.length) {
+            return res.json(util.success([]))
+        }
+        let result = await db.arrIdQuery(storeAlliance, 'alliance', 'allianceId', (item) => {
+            item.pictureUrls = JSON.parse(item.pictureUrls)
+        }, some)
+        console.log('1111111111111', result)
+        return res.json(util.success(result))
+    } catch (err) {
+        next(err)
+    }
+})
+
+
+
 
 module.exports = router;
