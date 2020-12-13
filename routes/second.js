@@ -58,6 +58,7 @@ router.get('/myStoreSecond', async (req, res, next) => {
         let second = await db.coreQuery(sql)
         second.forEach(item => {
             item.isStore = true
+            item.pictureUrls = JSON.parse(item.pictureUrls)
         })
         return res.json(util.success(second))
     } catch (err) {

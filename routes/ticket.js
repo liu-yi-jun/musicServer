@@ -53,6 +53,7 @@ router.get('/myStoreTicket', async (req, res, next) => {
         let ticket = await db.coreQuery(sql)
         ticket.forEach(item => {
             item.isStore = true
+            item.pictureUrls = JSON.parse(item.pictureUrls)
         })
         return res.json(util.success(ticket))
     } catch (err) {
