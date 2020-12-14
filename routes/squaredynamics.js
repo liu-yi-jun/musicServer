@@ -20,6 +20,7 @@ router.get('/getSquaredynamics', async (req, res, next) => {
             return res.json(util.success([]))
         }
         let p1 = db.isLike(squaredynamics, 'squaredynamicslike', userId, 'squaredynamicsId', (element) => {
+            element.introduce = util.cutstr(element.introduce, 150)
             element.pictureUrls = JSON.parse(element.pictureUrls)
             element.releaseTime = util.getDateDiff(element.releaseTime)
         })
@@ -107,6 +108,7 @@ router.get('/getDynamics', async (req, res, next) => {
             dynamics.forEach((item, index) => {
                 item.releaseTime = util.getDateDiff(item.releaseTime)
                 item.pictureUrls = JSON.parse(item.pictureUrls)
+                item.introduce = util.cutstr(item.introduce, 150)
             })
             return res.json(util.success(dynamics))
         })
@@ -126,12 +128,14 @@ router.get('/myStoreDynamic', async (req, res, next) => {
         let p1 = db.isLike(groupdynamics, 'groupdynamiclike', userId, 'groupDynamicId')
         groupdynamics.forEach(item => {
             item.isStore = true
+            item.introduce = util.cutstr(item.introduce, 150)
         })
         // let p2 = db.isStore(groupdynamics, 'groupdynamicstore', userId, 'groupDynamicId')
         let p2 = db.isLike(squaredynamics, 'squaredynamicslike', userId, 'squaredynamicsId')
         // let p4 = db.isStore(squaredynamics, 'squaredynamicsstore', userId, 'squaredynamicsId')
         squaredynamics.forEach(item => {
             item.isStore = true
+            item.introduce = util.cutstr(item.introduce, 150)
         })
 
         Promise.all([p1, p2]).then((result) => {
