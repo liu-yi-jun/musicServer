@@ -6,6 +6,7 @@ let util = require('../util/util')
 
 
 router.get('/getRandomTap', (req, res, next) => {
+
     let limit = req.query.limit
     let sql = `SELECT id, tapTitle, author FROM tap ORDER BY RAND() limit ${limit}`
     db.coreQuery(sql).then(result =>{
@@ -35,6 +36,17 @@ router.get('/getTapDetail', async (req, res, next) => {
             tapDetail: tap[0],
             tapRecord : tapRecord
         }))
+    } catch (err) {
+        next(err)
+    }
+})
+
+router.get('/getTaps', async (req, res, next) => {
+    try {
+        let { tapTitle, pageSize, pageIndex } = req.query
+        let sql = `select * from tap where isCharge = 0 and tapTitle like '%${tapTitle}%' ORDER BY views LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let taps = await db.coreQuery(sql)
+        res.json(util.success(taps))
     } catch (err) {
         next(err)
     }

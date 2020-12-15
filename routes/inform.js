@@ -6,7 +6,7 @@ let util = require('../util/util')
 router.get('/getInform', async (req, res, next) => {
     let { pageSize, pageIndex, userId } = req.query
     try {
-        let informs = await db.paging('notice', pageSize, pageIndex, { userId }, ['id DESC'])
+        let informs = await db.paging('notice', pageSize, pageIndex, { otherId: userId }, ['id DESC'])
         let p1 = isLike(informs, userId)
         let p2 = isStore(informs, userId)
         Promise.all([p1, p2]).then((result) => {
@@ -62,5 +62,15 @@ function isStore(arr, userId) {
         })
     })
 }
+
+router.post('/modifyInform', async (req, res, next) => {
+    let { theme, themeId } = req.body
+    console.log(req.body,'req.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.body')
+    db.update('notice', { isNew: 0 }, { theme, themeId }).then(result => {
+        res.json(util.success(result))
+    }).catch(err => next(err))
+})
+
+
 
 module.exports = router; 
