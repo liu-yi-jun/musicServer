@@ -96,9 +96,13 @@ router.post('/allianceLike', (req, res, next) => {
     extra.themeId = relation.themeId
     extra.isNew = 1
     db.operateLSF(data, () => {
-        return db.insert('notice', extra)
+        if (extra.userId != extra.otherId) {
+            return db.insert('notice', extra)
+        }
     }, () => {
-        let sql = `DELETE FROM notice WHERE userId = ${relation.userId} and theme = '${data.mainTable.name}' and themeId = ${data.mainTable.id}`
+        if (extra.userId != extra.otherId) {
+            let sql = `DELETE FROM notice WHERE userId = ${relation.userId} and theme = '${data.mainTable.name}' and themeId = ${data.mainTable.id}`
+        }
         return db.coreQuery(sql)
     }).then(result => {
         res.json(util.success(result))

@@ -61,11 +61,15 @@ router.post('/groupcourseLike', (req, res, next) => {
     extra.theme = data.mainTable.name
     extra.themeId = relation.themeId
     extra.isNew = 1
-    db.operateLSF(data,() => {
-        return db.insert('notice', extra)
+    db.operateLSF(data, () => {
+        if (extra.userId != extra.otherId) {
+            return db.insert('notice', extra)
+        }
     }, () => {
-        let sql = `DELETE FROM notice WHERE userId = ${relation.userId} and theme = '${data.mainTable.name}' and themeId = ${data.mainTable.id}`
-        return db.coreQuery(sql)
+        if (extra.userId != extra.otherId) {
+            let sql = `DELETE FROM notice WHERE userId = ${relation.userId} and theme = '${data.mainTable.name}' and themeId = ${data.mainTable.id}`
+            return db.coreQuery(sql)
+        }
     }).then(result => {
         res.json(util.success(result))
     }).catch(err => next(err))
@@ -111,8 +115,8 @@ router.get('/myStoreCourse', async (req, res, next) => {
         let { pageSize, pageIndex, userId } = req.query
         let some = ['id', 'groupId', 'groupName', 'userId', 'avatarUrl', 'nickName', 'posterUrl', 'courseName', 'views', 'store']
         let storeCourse = await db.paging('groupcoursestore', pageSize, pageIndex, { userId }, ['id DESC'])
-        if(!storeCourse.length){
-           return res.json(util.success([]))
+        if (!storeCourse.length) {
+            return res.json(util.success([]))
         }
         let result = await db.arrIdQuery(storeCourse, 'groupcourse', 'groupcourseId', undefined, some)
         res.json(util.success(result))
