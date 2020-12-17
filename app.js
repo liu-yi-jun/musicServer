@@ -3,9 +3,13 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
 // 引入数据库操作
 var db = require('./db/db');
+
+
+const jwt = require("jsonwebtoken")
+//撒盐，加密时候混淆
+const secret = '113Bmongojsdalkfnxcvmas'
 
 var index = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -26,19 +30,23 @@ var inform = require('./routes/inform');
 var system = require('./routes/system');
 var performance = require('./routes/performance');
 var tap = require('./routes/tap');
+let handleToken = require('./util/handleToken')
 
 const schedule = require('node-schedule');
-const  scheduleCronstyle = ()=>{
+const scheduleCronstyle = () => {
   //每天的0点定时执行一次:
-    schedule.scheduleJob('0 0 0 * * *',()=>{
-        console.log('scheduleCronstyle:' + new Date());
-        let sql = "UPDATE users SET isSignIn=0 where id < 100000"
-        db.coreQuery(sql)
-    }); 
+  schedule.scheduleJob('0 0 0 * * *', () => {
+    console.log('scheduleCronstyle:' + new Date());
+    let sql = "UPDATE users SET isSignIn=0 where id < 100000"
+    db.coreQuery(sql)
+  });
 }
 scheduleCronstyle();
 
 var app = express();
+
+
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -52,6 +60,25 @@ app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 验证token
+app.use((req, res, next) => {
+  console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
+  if (!req.url.includes(handleToken.whiteList)) {
+    handleToken.verifyToken(req.headers.token).then(res => {
+      console.log(res, '校验成功')
+      next()
+    }).catch(e => {
+      res.send({
+        code: -2,
+        message: 'invalid token'
+      })
+    })
+  } else {
+    next()
+  }
+})
+
 
 app.use('/api/user', usersRouter);
 app.use('/api/group', groupRouter);

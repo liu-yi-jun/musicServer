@@ -4,6 +4,41 @@ var db = require('../db/db');
 let util = require('../util/util')
 let request = require('request');
 let wx = require('../config/config').wx
+let handleToken = require('../util/handleToken')
+
+
+router.get('/getToken', (req, res, next) => {
+  let code = req.query.code
+  let sessionUrl = `https://api.weixin.qq.com/sns/jscode2session?appid=${wx.appId}&secret=${wx.appSecret}&js_code=${code}&grant_type=authorization_code`
+  request(sessionUrl, async (err, response, body) => {
+    let data = JSON.parse(body);
+    console.log(data)
+    if (data.errmsg) return res.json(util.fail(data.errmsg))
+    try {
+      let token = handleToken.createToken({
+        openid: data.openid,
+        session_key: data.session_key
+      })
+      res.json(util.success(token))
+    } catch (err) {
+      next(err)
+    }
+  })
+})
+
+router.get('/getServerUserInfo', (req, res, next) => {
+  try {
+    handleToken.verifyToken(req.headers.token).then(async info => {
+      console.log(1111111111111111, res)
+      let openid = info.openid
+      let result = await queryUser(openid)
+      return res.json(util.success(result))
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 
 /**
  * @param { number } code
@@ -53,9 +88,9 @@ function queryUser(openid) {
       console.log('queryUser', result)
       if (result.length) {
         let userInfo = result[0]
-        return resolve({ userInfo, openid })
+        return resolve({ userInfo })
       } else {
-        return resolve({ openid })
+        return resolve({})
       }
     })
 
@@ -64,14 +99,17 @@ function queryUser(openid) {
 
 router.post('/register', async (req, res, next) => {
   console.log('111111111111111111111111111111111111111')
-  let { openid, userInfo } = req.body
   try {
-    let result = await queryUser(openid)
-    if (!result.userInfo) {
-      await insertUser(openid, userInfo)
-      result = await queryUser(openid)
-    }
-    return res.json(util.success(result))
+    handleToken.verifyToken(req.headers.token).then(async info => {
+      let openid = info.openid
+      let userInfo = req.body.userInfo
+      let result = await queryUser(openid)
+      if (!result.userInfo) {
+        await insertUser(openid, userInfo)
+        result = await queryUser(openid)
+      }
+      return res.json(util.success(result))
+    })
   } catch (err) {
     next(err)
   }
@@ -237,13 +275,13 @@ router.get('/getUserFollow', async (req, res, next) => {
   try {
     let sql = `SELECT t2.id, t2.nickName, t2.avatarUrl, t2.gender,t2.constellation,t2.age  FROM (select * from userfollow where userId = ${otherId} ORDER BY id DESC) AS t1 INNER JOIN users t2 ON t1.otherId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let list = await db.coreQuery(sql)
-    list = await relationship(list,userId)
+    list = await relationship(list, userId)
     res.json(util.success(list))
   } catch (err) {
     next(err)
   }
 })
-function relationship(list,userId) {
+function relationship(list, userId) {
   return new Promise((resolve, reject) => {
     if (!list.length) resolve(list)
     let p = Promise.resolve()
@@ -278,7 +316,7 @@ router.get('/getUserFan', async (req, res, next) => {
   try {
     let sql = `SELECT t2.id, t2.nickName, t2.avatarUrl, t2.gender,t2.constellation,t2.age  FROM (select * from userfollow where otherId = ${otherId} ORDER BY id DESC) AS t1 INNER JOIN users t2 ON t1.userId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let list = await db.coreQuery(sql)
-    list = await relationship(list,userId)
+    list = await relationship(list, userId)
     res.json(util.success(list))
   } catch (err) {
     next(err)
