@@ -66,7 +66,6 @@ app.use((req, res, next) => {
   console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
   if (!req.url.includes(handleToken.whiteList)) {
     handleToken.verifyToken(req.headers.token).then(res => {
-      console.log(res, '校验成功')
       next()
     }).catch(e => {
       res.send({
