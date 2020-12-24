@@ -42,8 +42,10 @@ router.get('/getNotice', (req, res, next) => {
 })
 
 router.post('/analysis', (req, res, next) => {
-    // let endArry = new DoubleArray(req.body.endArry)
-    var rtn = MyLibrary.return_result(req.body.endArry, 8000)
+    // newArray =  Array.apply([], newArray)
+    let endArry = req.body.endArry
+    var rtn = MyLibrary.return_result(new DoubleArray(endArry), 8000)
+
     MyLibrary.return_detail(rtn, detail)
     console.log(' Frequency: ', rtn, '\n', 'Pitch Names: ', tone[parseInt(detail[1]) - 1], '\n', 'Group: ', detail[0], '\n', 'Cent: ', detail[2])
     res.json(util.success(req.body))
