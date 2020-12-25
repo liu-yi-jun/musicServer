@@ -11,7 +11,7 @@ var data = new DoubleArray([0, 0, -3.0517578125e-05, 0, 0, 0, 0, -3.0517578125e-
 var detail = new DoubleArray([0, 0, 0])
 var tone = ['C', '#C', 'D', '#D', 'E', 'F', '#F', 'G', '#G', 'A', '#A', 'B'];
 
-var MyLibrary = ffi.Library('C:/Users/Administrator/Desktop/new/Codefield/TestTone-NodeJS/Dll/return_fin_result1221.dll', {
+var MyLibrary = ffi.Library('C:/Users/Administrator/Desktop/Codefield/TestTone-NodeJS/Dll/return_fin_result1221.dll', {
     "return_result": ['double', [DoubleArray, 'double']],
     "return_detail": [DoubleArray, ['double', DoubleArray]]
 });
@@ -42,8 +42,10 @@ router.get('/getNotice', (req, res, next) => {
 })
 
 router.post('/analysis', (req, res, next) => {
+    let endArry = new DoubleArray(req.body.endArry)
     // let endArry = new DoubleArray(req.body.endArry)
-    var rtn = MyLibrary.return_result(req.body.endArry, 8000)
+    // console.log(req.body.endArry)
+    var rtn = MyLibrary.return_result(endArry, 8000)
     MyLibrary.return_detail(rtn, detail)
     console.log(' Frequency: ', rtn, '\n', 'Pitch Names: ', tone[parseInt(detail[1]) - 1], '\n', 'Group: ', detail[0], '\n', 'Cent: ', detail[2])
     res.json(util.success(req.body))
