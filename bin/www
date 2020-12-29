@@ -11,10 +11,12 @@ var https = require('https');
 var fs = require('fs')
 var path = require('path');
 
+
 var options = {
-  key: fs.readFileSync(path.join(__dirname, '../security/4941997_www.eigene.cn.key')),
-  pem: fs.readFileSync(path.join(__dirname, '../security/4941997_www.eigene.cn.pem')),
+  key: fs.readFileSync(path.join(__dirname, '../security/4990962_www.eigene.cn.key')),
+  cert: fs.readFileSync(path.join(__dirname, '../security/4990962_www.eigene.cn.pem')),
 }
+
 
 /**
  * Get port from environment and store in Express.
@@ -30,7 +32,7 @@ app.set('port', port);
 
 // var server = http.createServer(app);
 // 开启https
-var server = https.createServer(options,app);
+var server = https.createServer(options, app);
 
 /**
  * Listen on provided port, on all network interfaces.

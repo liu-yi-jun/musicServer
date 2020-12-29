@@ -2,8 +2,8 @@ const { resource } = require("../app");
 
 module.exports = {
     mysql: {
-        // host: '120.78.128.21',
-        host: 'localhost',
+        host: '120.78.128.21',
+        // host: 'localhost',
         user: 'root',
         password: 'root',
         database: 'music',
@@ -15,7 +15,7 @@ module.exports = {
     },
     resource: {
         // baseUrl:'http://localhost:3000'
-        baseUrl:"https://eigene.cn:3000"
+        baseUrl:"https://eigene.cn"
         // baseUrl:"http://eigene.free.idcfengye.com"
     }
 }
