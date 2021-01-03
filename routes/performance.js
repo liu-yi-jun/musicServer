@@ -6,8 +6,9 @@ let util = require('../util/util')
 router.get('/getFestival', async (req, res, next) => {
     let { pageSize, pageIndex, userId } = req.query
     try {
-        let some = ['id','price','showTime','showCity','showAddress','showTitle','showDetail','showPoster','showTicket','share','store','comment','likes']
+        let some = ['id','price','showTime','showCity','showAddress','showTitle','showPoster','showTicket','share','store','comment','likes']
         let musicfestivals = await db.paging('musicfestival', pageSize, pageIndex, {}, ["showCity = '杭州' desc, id"],some)
+        // let musicfestivals = await db.paging('musicfestival', pageSize, pageIndex, {}, ["id desc"],some)
         let p1 = db.isLike(musicfestivals, 'musicfestivallike', userId, 'musicfestivalId')
         let p2 = db.isStore(musicfestivals, 'musicfestivalstore', userId, 'musicfestivalId')
         Promise.all([p1, p2]).then((result) => {
@@ -21,8 +22,9 @@ router.get('/getFestival', async (req, res, next) => {
 router.get('/getLiveHouse', async (req, res, next) => {
     let { pageSize, pageIndex, userId } = req.query
     try {
-        let some = ['id','price','showTime','showCity','showAddress','showTitle','showDetail','showPoster','showTicket','share','store','comment','likes']
+        let some = ['id','price','showTime','showCity','showAddress','showTitle','showPoster','showTicket','share','store','comment','likes']
         let livehouses = await db.paging('livehouse', pageSize, pageIndex, {}, ["showCity = '杭州' desc, id"],some)
+        // let livehouses = await db.paging('livehouse', pageSize, pageIndex, {}, ["id desc"],some)
         let p1 = db.isLike(livehouses, 'livehouselike', userId, 'livehouseId')
         let p2 = db.isStore(livehouses, 'livehousestore', userId, 'livehouseId')
         Promise.all([p1, p2]).then((result) => {
