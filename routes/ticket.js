@@ -17,6 +17,7 @@ router.get('/searchTickets', async (req, res, next) => {
         let tickets = await db.vague('ticket', 'title', title, pageSize, pageIndex, ['id DESC'])
         tickets = await db.isStore(tickets, 'ticketstore', userId, 'ticketId', (ticket) => {
             ticket.pictureUrls = JSON.parse(ticket.pictureUrls)
+            ticket.additional = util.cutstr(second.additional, 50)
         })
         res.json(util.success(tickets))
     } catch (err) {
