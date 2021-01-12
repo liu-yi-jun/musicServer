@@ -17,7 +17,7 @@ router.get('/searchTickets', async (req, res, next) => {
         let tickets = await db.vague('ticket', 'title', title, pageSize, pageIndex, ['id DESC'])
         tickets = await db.isStore(tickets, 'ticketstore', userId, 'ticketId', (ticket) => {
             ticket.pictureUrls = JSON.parse(ticket.pictureUrls)
-            ticket.additional = util.cutstr(second.additional, 50)
+            ticket.additional = util.cutstr(ticket.additional, 50)
         })
         res.json(util.success(tickets))
     } catch (err) {
@@ -31,7 +31,11 @@ router.post('/followTicket', async (req, res, next) => {
         let relation = req.body.relation
         let operate = req.body.operate
         let data = {
-            mainTable: undefined,
+            mainTable: {
+                name: 'ticket',
+                modify: 'store',
+                id: relation.ticketId
+            },
             viceTable: {
                 name: 'ticketstore',
                 relation
@@ -55,11 +59,101 @@ router.get('/myStoreTicket', async (req, res, next) => {
         ticket.forEach(item => {
             item.isStore = true
             item.pictureUrls = JSON.parse(item.pictureUrls)
+            item.additional = util.cutstr(item.additional, 50)
         })
         return res.json(util.success(ticket))
     } catch (err) {
         next(err)
     }
 })
+
+router.get('/ticketDetailAndCommont', async (req, res, next) => {
+    try {
+        let { pageSize, pageIndex, id, table, type, userId } = req.query
+        // 如果type = detail 则返回详情和评论，否则返回评论
+        if (type === 'detail') {
+            let details = await db.onlyQuery(table, 'id', id)
+            let ticketlike = await db.multipleQuery('ticketlike', { ticketId: id, userId })
+            let ticketstore = await db.multipleQuery('ticketstore', { ticketId: id, userId })
+            // details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
+            details[0].pictureUrls = JSON.parse(details[0].pictureUrls)
+            ticketlike.length ? details[0].isLike = true : details[0].isLike = false
+            ticketstore.length ? details[0].isStore = true : details[0].isStore = false
+            let commentArr = await db.queryComment(pageSize, pageIndex, table, id)
+            res.json(util.success({
+                detail: details[0],
+                commentArr
+            }))
+        } else {
+            let commentArr = await db.queryComment(pageSize, pageIndex, table, id)
+            res.json(util.success({
+                commentArr
+            }))
+        }
+    } catch (err) {
+        next(err)
+    }
+})
+router.post('/ticketLike', (req, res, next) => {
+    let relation = req.body.relation
+    let operate = req.body.operate
+    let extra = req.body.extra
+    let data = {
+        mainTable: {
+            name: 'ticket',
+            modify: 'likes',
+            id: relation.themeId
+        },
+        viceTable: {
+            name: 'ticketlike',
+            relation: {
+                userId: relation.userId,
+                ticketId: relation.themeId
+            }
+        },
+        operate
+    }
+    extra.userId = relation.userId
+    extra.theme = data.mainTable.name
+    extra.themeId = relation.themeId
+    extra.isNew = 1
+    db.operateLSF(data, () => {
+        if (extra.userId != extra.otherId) {
+            return db.insert('notice', extra)
+        }
+    }, () => {
+        if (extra.userId != extra.otherId) {
+            let sql = `DELETE FROM notice WHERE userId = ${relation.userId} and theme = '${data.mainTable.name}' and themeId = ${data.mainTable.id}`
+        }
+        return db.coreQuery(sql)
+    }).then(result => {
+        res.json(util.success(result))
+    }).catch(err => next(err))
+
+})
+router.post('/ticketStore', (req, res, next) => {
+    let relation = req.body.relation
+    let operate = req.body.operate
+    let data = {
+        mainTable: {
+            name: 'ticket',
+            modify: 'store',
+            id: relation.themeId
+        },
+        viceTable: {
+            name: 'ticketstore',
+            relation: {
+                userId: relation.userId,
+                ticketId: relation.themeId
+            }
+        },
+        operate
+    }
+    db.operateLSF(data).then(result => {
+        res.json(util.success(result))
+    }).catch(err => next(err))
+
+})
+
 
 module.exports = router;

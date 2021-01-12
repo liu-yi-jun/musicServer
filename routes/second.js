@@ -21,7 +21,11 @@ router.post('/followSecond', async (req, res, next) => {
         let relation = req.body.relation
         let operate = req.body.operate
         let data = {
-            mainTable: undefined,
+            mainTable: {
+                name: 'second',
+                modify: 'store',
+                id: relation.secondId
+            },
             viceTable: {
                 name: 'secondstore',
                 relation
@@ -60,6 +64,7 @@ router.get('/myStoreSecond', async (req, res, next) => {
         second.forEach(item => {
             item.isStore = true
             item.pictureUrls = JSON.parse(item.pictureUrls)
+            item.additional = util.cutstr(item.additional, 50)
         })
         return res.json(util.success(second))
     } catch (err) {
