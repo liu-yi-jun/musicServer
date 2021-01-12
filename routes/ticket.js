@@ -77,6 +77,7 @@ router.get('/ticketDetailAndCommont', async (req, res, next) => {
             let ticketstore = await db.multipleQuery('ticketstore', { ticketId: id, userId })
             // details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
             details[0].pictureUrls = JSON.parse(details[0].pictureUrls)
+            details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
             ticketlike.length ? details[0].isLike = true : details[0].isLike = false
             ticketstore.length ? details[0].isStore = true : details[0].isStore = false
             let commentArr = await db.queryComment(pageSize, pageIndex, table, id)

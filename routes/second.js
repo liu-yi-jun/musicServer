@@ -82,6 +82,7 @@ router.get('/secondDetailAndCommont', async (req, res, next) => {
             let secondstore = await db.multipleQuery('secondstore', { secondId: id, userId })
             // details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
             details[0].pictureUrls = JSON.parse(details[0].pictureUrls)
+            details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
             secondlike.length ? details[0].isLike = true : details[0].isLike = false
             secondstore.length ? details[0].isStore = true : details[0].isStore = false
             let commentArr = await db.queryComment(pageSize, pageIndex, table, id)
