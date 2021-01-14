@@ -59,7 +59,7 @@ router.get('/searchSeconds', async (req, res, next) => {
 router.get('/myStoreSecond', async (req, res, next) => {
     try {
         let { pageSize, pageIndex, userId } = req.query
-        let sql = `SELECT t2.*  FROM (select * from secondstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN second t2 ON t1.secondId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let sql = `SELECT t2.*  FROM (select * from secondstore where userId = ${userId}) AS t1 INNER JOIN second t2 ON t1.secondId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
         let second = await db.coreQuery(sql)
         second.forEach(item => {
             item.isStore = true
