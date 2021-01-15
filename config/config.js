@@ -14,8 +14,8 @@ module.exports = {
         appSecret: 'a85bda6211717ca95cfe57501ba20a71'
     },
     resource: {
-        // baseUrl:'http://localhost:3000'
-        baseUrl:"https://eigene.cn"
+        baseUrl:'http://localhost:3000'
+        // baseUrl:"https://eigene.cn"
         // baseUrl:"http://eigene.free.idcfengye.com"
     }
 }
