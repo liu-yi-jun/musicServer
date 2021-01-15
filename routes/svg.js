@@ -198,13 +198,13 @@ let react = {
     if (capo) {
       str1 = `<g>
       <g
-        transform=${`translate(${getStringPosition(strings, strings)}, ${positions.fret[barreFrets[0].value]})`}
+        transform='${`translate(${getStringPosition(strings, strings)}, ${positions.fret[barreFrets[0].value]})`}'
         >
-        <path d=${`
+        <path d='${`
           M 0, 0
           m -4, 0
           a 4,4 0 1,1 8,0
-        `}
+        `}'
           fill='#555'
           fillOpacity='${0.2}'
           transform='rotate(-90)'
@@ -219,13 +219,13 @@ let react = {
         height='${8.25}'
       />
       <g
-        transform=${`translate(${getStringPosition(1, strings)}, ${positions.fret[barreFrets[0].value]})`}
+        transform='${`translate(${getStringPosition(1, strings)}, ${positions.fret[barreFrets[0].value]})`}'
         >
-        <path d=${`
+        <path d='${`
           M 0, 0
           m -4, 0
           a 4,4 0 1,1 8,0
-        `}
+        `}'
           fill='#555'
           fillOpacity='${0.2}'
           transform='rotate(90)'
@@ -351,10 +351,11 @@ function writing() {
 
 
 router.get('/getGuitar', (req, res, next) => {
+  let {key,suffix} = req.query
   var contents = fs.readFileSync("./guitar.json");
   contents = JSON.parse(contents)
-  let key = "D"
-  let suffix = "sus4"
+  // let key = "C"
+  // let suffix = "/F"
   let positionsIndex = 0
   let standard = ['E', 'A', 'D', 'G', 'B', 'E']
 
@@ -380,21 +381,28 @@ router.get('/getGuitar', (req, res, next) => {
   //   ...position
   // }
   const instrument = {
+    // 线的数量
     strings: main.strings,
+    // 和弦品
     fretsOnChord: main.fretsOnChord,
     name: 'Guitar',
+    // ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
     keys,
     tunings: {
+      // 下方的字母
       standard
     }
   }
+  // 是否简单
   const lite = false
 
   console.log('chord',chord)
   console.log('instrument',instrument)
   
   fs.writeFileSync('./public/svg/test.svg', react.chord(chord, instrument, lite))
-  res.json(contents)
+  let url = `${baseUrl}/svg/test.svg`
+  contents.url = url
+  res.json(util.success(contents))
 })
 
 
