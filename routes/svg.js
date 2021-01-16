@@ -317,41 +317,98 @@ let react = {
 
 
 
+// 例子
+// function init() {
+//   const chord = {
+//     frets: [1, 3, 3, 2, 1, 1],
+//     fingers: [1, 3, 4, 2, 1, 1],
+//     barres: [1],
+//     capo: false,
+//     baseFret: 1
+//   }
+//   const instrument = {
+//     strings: 6,
+//     fretsOnChord: 4,
+//     name: 'Guitar',
+//     keys: [],
+//     tunings: {
+//       standard: ['E', 'A', 'D', 'G', 'B', 'E']
+//     }
+//   }
+//   const lite = false // defaults to false if omitted
+//   return react.chord(chord, instrument, lite)
 
-function init() {
-  const chord = {
-    frets: [1, 3, 3, 2, 1, 1],
-    fingers: [1, 3, 4, 2, 1, 1],
-    barres: [1],
-    capo: false,
-    baseFret: 1
-  }
-  const instrument = {
-    strings: 6,
-    fretsOnChord: 4,
-    name: 'Guitar',
-    keys: [],
-    tunings: {
-      standard: ['E', 'A', 'D', 'G', 'B', 'E']
-    }
-  }
-  const lite = false // defaults to false if omitted
-  return react.chord(chord, instrument, lite)
-
-}
+// }
 
 
-function writing() {
-  fs.writeFileSync('./public/svg/test.svg', init())
-  let url = `${baseUrl}/svg/test.svg`
-  console.log(url)
-}
+// function writing() {
+//   fs.writeFileSync('./public/svg/test.svg', init())
+//   let url = `${baseUrl}/svg/test.svg`
+//   console.log(url)
+// }
 
 // writing()
 
 
+
+function analysis(str, keys, suffixes) {
+  let key, suffix
+  let keyLegal = false
+  let suffixLegal = false
+  if (str.indexOf('#') === 1 || str.indexOf('b') === 1) {
+    key = str.slice(0, 2)
+    suffix = str.slice(2)
+  } else {
+    key = str.slice(0, 1)
+    suffix = str.slice(1)
+  }
+  console.log('key1', key, 'suffix', suffix)
+  keys.forEach(item => {
+    if (item === key) {
+      console.log(item, key)
+      keyLegal = true
+      return
+    }
+  })
+  if (!keyLegal) {
+    return false
+    // if (key.includes('#')) {
+    //   key.replace('#', 'b')
+    // } else if (key.includes('b')) {
+    //   key.replace('b', '#')
+    // } else {
+    //   console.log('key2', key, 'suffix', suffix)
+    //   return false
+    // }
+    // keys.forEach(item => {
+    //   if (item === key) {
+    //     keyLegal = true
+    //     console.log('key3', key, 'suffix', suffix)
+    //     return
+    //   }
+    // })
+  } else {
+    suffixes.forEach(item => {
+      if (item === suffix) {
+        suffixLegal = true
+        console.log('key4', key, 'suffix', suffix)
+        return
+      }
+    })
+    console.log('key5', key, 'suffix', suffix)
+    if (keyLegal && suffixLegal) {
+      return {
+        key,
+        suffix
+      }
+    } else return false
+  } 
+
+}
+
+
 router.get('/getGuitar', (req, res, next) => {
-  let {key,suffix} = req.query
+  let { key, suffix } = req.query
   var contents = fs.readFileSync("./guitar.json");
   contents = JSON.parse(contents)
   // let key = "C"
@@ -370,16 +427,14 @@ router.get('/getGuitar', (req, res, next) => {
     }
   })
 
+  //     frets: [1, 3, 3, 2, 1, 1],
+  //     fingers: [1, 3, 4, 2, 1, 1],
+  //     barres: [1],
+  //     capo: false,
+  //     baseFret: 1
   chord = chord.positions[positionsIndex]
 
-  // frets: [1, 3, 3, 2, 1, 1],
-  // fingers: [1, 3, 4, 2, 1, 1],
-  // barres: [1],
-  // capo: false,
-  // baseFret: 1
-  // const chord = {
-  //   ...position
-  // }
+
   const instrument = {
     // 线的数量
     strings: main.strings,
@@ -396,9 +451,9 @@ router.get('/getGuitar', (req, res, next) => {
   // 是否简单
   const lite = false
 
-  console.log('chord',chord)
-  console.log('instrument',instrument)
-  
+  console.log('chord', chord)
+  console.log('instrument', instrument)
+
   fs.writeFileSync('./public/svg/test.svg', react.chord(chord, instrument, lite))
   let url = `${baseUrl}/svg/test.svg`
   contents.url = url
