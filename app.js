@@ -63,21 +63,21 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 验证token
-// app.use((req, res, next) => {
-//   console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
-//   if (!req.url.includes(handleToken.whiteList)) {
-//     handleToken.verifyToken(req.headers.token).then(res => {
-//       next()
-//     }).catch(e => {
-//       res.send({
-//         code: -2,
-//         message: 'invalid token'
-//       })
-//     })
-//   } else {
-//     next()
-//   }
-// })
+app.use((req, res, next) => {
+  console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
+  if (!req.url.includes(handleToken.whiteList)) {
+    handleToken.verifyToken(req.headers.token).then(res => {
+      next()
+    }).catch(e => {
+      res.send({
+        code: -2,
+        message: 'invalid token'
+      })
+    })
+  } else {
+    next()
+  }
+})
 
 
 app.use('/api/user', usersRouter);

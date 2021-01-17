@@ -409,7 +409,7 @@ function analysis(str, keys, suffixes) {
 
 router.get('/getGuitar', (req, res, next) => {
   let { key, suffix } = req.query
-  var contents = fs.readFileSync("./guitar.json");
+  var contents = fs.readFileSync(__dirname + "/../data/guitar.json");
   contents = JSON.parse(contents)
   // let key = "C"
   // let suffix = "/F"
@@ -453,8 +453,8 @@ router.get('/getGuitar', (req, res, next) => {
 
   console.log('chord', chord)
   console.log('instrument', instrument)
-
-  fs.writeFileSync('./public/svg/test.svg', react.chord(chord, instrument, lite))
+  
+  fs.writeFileSync(__dirname + `/../public/svg/test.svg`, react.chord(chord, instrument, lite))
   let url = `${baseUrl}/svg/test.svg`
   contents.url = url
   res.json(util.success(contents))
