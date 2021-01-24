@@ -41,7 +41,7 @@ let react = {
     if (fret === -1) {
       str = `<text
       font-size='0.7rem'
-      fill='#444'
+      fill='#fff'
       font-family='Verdana'
       text-anchor='middle'
       x='${getStringPosition(string, strings)}'
@@ -51,8 +51,8 @@ let react = {
       str = `<g>
       <circle
         stroke-width='0.25'
-        stroke='#444'
-        fill='${fret === 0 ? 'transparent' : '#444'}'
+        stroke='#fff'
+        fill='${fret === 0 ? 'transparent' : '#fff'}'
         cx='${getStringPosition(string, strings)}'
         cy='${positions.fret[fret]}'
         r='${fret === 0 ? radius['open'] : radius['fret']}'
@@ -62,7 +62,7 @@ let react = {
           font-size='3pt'
           font-family='Verdana'
           text-anchor='middle'
-          fill='white'
+          fill='black'
           x='${getStringPosition(string, strings)}'
           y='${positions.finger[fret]}'
         >${finger}</text>`}
@@ -118,7 +118,7 @@ let react = {
     let str1
     if (baseFret === 1) {
       str1 = `<path
-      stroke='#444'
+      stroke='#fff'
       stroke-width='2'
       stroke-linecap='round'
       stroke-linejoin='round'
@@ -127,7 +127,7 @@ let react = {
     } else {
       str1 = ` <text
       font-size='0.25rem'
-      fill='#444'
+      fill='#fff'
       font-family='Verdana'
       x='${getBarreOffset(strings, frets, baseFret, capo)}'
       y='8'
@@ -137,7 +137,7 @@ let react = {
     ${tuning.slice().map((note, index) =>
       `<text
         font-size='0.3rem'
-        fill='#444'
+        fill='#fff'
         font-family='Verdana'
         text-anchor='middle'
         x='${offsets[strings].x + index * 10}'
@@ -148,7 +148,7 @@ let react = {
 
     return ` <g>
   <path
-    stroke='#444'
+    stroke='#fff'
     stroke-width='0.25'
     stroke-linecap='square'
     stroke-linejoin='square'
@@ -205,13 +205,13 @@ let react = {
           m -4, 0
           a 4,4 0 1,1 8,0
         `}'
-          fill='#555'
+          fill='#DADBDB'
           fillOpacity='${0.2}'
           transform='rotate(-90)'
         />
       </g>
       <rect
-        fill='#555'
+        fill='#DADBDB'
         x='${fretXPosition[strings][0]}'
         y='${fretYPosition[barre - 1]}'
         width='${(strings - 1) * 10}'
@@ -226,7 +226,7 @@ let react = {
           m -4, 0
           a 4,4 0 1,1 8,0
         `}'
-          fill='#555'
+          fill='#DADBDB'
           fillOpacity='${0.2}'
           transform='rotate(90)'
         />
@@ -236,14 +236,14 @@ let react = {
 
     let str2 = barreFrets.map(fret => `<circle
   stroke-width='0.25'
-  stroke='#444'
-  fill='#444'
+  stroke='#fff'
+  fill='#fff'
   cx='${getStringPosition(strings - fret.position, strings)}'
   cy='${positions.fret[fret.value]}'
   r='${4}'
 />`)
     let str3 = `<rect
-    fill='#444'
+    fill='#fff'
     x='${fretXPosition[strings][string1]}'
     y='${y}'
     width='${width}'
@@ -253,7 +253,7 @@ let react = {
     font-size='3pt'
     font-family='Verdana'
     text-anchor='middle'
-    fill='white'
+    fill='black'
     x='${getStringPosition(strings - fret.position, strings)}'
     y='${positions.finger[fret.value]}'
   >${finger}</text>`)
@@ -402,61 +402,80 @@ function analysis(str, keys, suffixes) {
         suffix
       }
     } else return false
-  } 
+  }
 
 }
 
 
 router.get('/getGuitar', (req, res, next) => {
-  let { key, suffix } = req.query
-  var contents = fs.readFileSync(__dirname + "/../data/guitar.json");
+  let { key, suffix, name } = req.query
+  let standard
+  if (name === 'guitar') {
+    name = 'Guitar'
+    standard = ['E', 'A', 'D', 'G', 'B', 'E']
+    var contents = fs.readFileSync(__dirname + "/../data/guitar.json");
+  } else if (name === 'ukelele') {
+    name = 'Ukelele'
+    var contents = fs.readFileSync(__dirname + "/../data/ukelele.json");
+    standard = ['G4', 'C4', 'E4', 'A4']
+  } else {
+    return next('无该和弦')
+  }
   contents = JSON.parse(contents)
-  // let key = "C"
-  // let suffix = "/F"
-  let positionsIndex = 0
-  let standard = ['E', 'A', 'D', 'G', 'B', 'E']
-
   key = key.replace('#', 'sharp')
+
   let chords = contents.chords[key]
   let main = contents.main
   let keys = contents.keys
-  let chord
+  let chordObj, chord
   chords.forEach((item, index) => {
     if (item.suffix == suffix) {
-      chord = chords[index]
+      chordObj = chords[index]
+      return
     }
   })
-
+  if(!chordObj) return next('无该和弦')
+  // # 出现在路径中会访问不到
+  suffix = suffix.replace('#', 'sharp')
   //     frets: [1, 3, 3, 2, 1, 1],
   //     fingers: [1, 3, 4, 2, 1, 1],
   //     barres: [1],
   //     capo: false,
   //     baseFret: 1
-  chord = chord.positions[positionsIndex]
-
-
-  const instrument = {
-    // 线的数量
-    strings: main.strings,
-    // 和弦品
-    fretsOnChord: main.fretsOnChord,
-    name: 'Guitar',
-    // ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
-    keys,
-    tunings: {
-      // 下方的字母
-      standard
+  //   chord = chord.positions[positionsIndex]
+  let chordUrls = []
+  chordObj.positions.forEach((item, index) => {
+    chord = item
+    const instrument = {
+      // 线的数量
+      strings: main.strings,
+      // 和弦品
+      fretsOnChord: main.fretsOnChord,
+      name,
+      // ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+      keys,
+      tunings: {
+        // 下方的字母
+        standard
+      }
     }
-  }
-  // 是否简单
-  const lite = false
+    // 是否简单
+    const lite = false
 
-  console.log('chord', chord)
-  console.log('instrument', instrument)
-  
-  fs.writeFileSync(__dirname + `/../public/svg/test.svg`, react.chord(chord, instrument, lite))
-  let url = `${baseUrl}/svg/test.svg`
-  contents.url = url
+    try {
+      fs.readFileSync(__dirname + `/../public/svg/${name}/${key}${suffix}-v${index}.svg`, { encoding: 'utf-8' });
+      console.log('exists')
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        console.error('File does not exists');
+        fs.writeFileSync(__dirname + `/../public/svg//${name}/${key}${suffix}-v${index}.svg`, react.chord(chord, instrument, lite))
+      } else {
+        throw err;
+      }
+    }
+    chordUrls.push(`${baseUrl}/svg/${name}/${key}${suffix}-v${index}.svg`)
+  })
+  contents.chordUrls = chordUrls
   res.json(util.success(contents))
 })
 
