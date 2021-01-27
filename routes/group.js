@@ -161,4 +161,17 @@ router.post('/followGroup', (req, res, next) => {
     }).catch(err => next(err))
 
 })
+
+
+router.get('/pagingGetGroup', async (req, res, next) => {
+    let { pageSize, pageIndex, groupName } = req.query
+    try {
+        let sql = `SELECT * FROM groups where groupName like '%${groupName}%' LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let groups = await db.coreQuery(sql)
+        res.json(util.success(groups))
+    } catch (err) {
+        next(err)
+    }
+})
+
 module.exports = router;
