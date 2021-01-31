@@ -29,7 +29,6 @@ router.get('/getToken', (req, res, next) => {
 router.get('/getServerUserInfo', (req, res, next) => {
   try {
     handleToken.verifyToken(req.headers.token).then(async info => {
-      console.log(1111111111111111, res)
       let openid = info.openid
       let result = await queryUser(openid)
       return res.json(util.success(result))
@@ -194,17 +193,35 @@ router.post('/addManage', (req, res, next) => {
 })
 router.post('/signOutGroup', async (req, res, next) => {
   let { groupId, userId } = req.body
-  let modifys = {
-    groupName: null,
-    groupDuty: null,
-    groupId: null,
-  }, conditions = {
+
+  await db.deleteData('manygroups', {
+    groupId,
+    userId
+  })
+  let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+  let modifys
+  if (myGrouList.length) {
+    let nextGroup = myGrouList[myGrouList.length - 1]
+    let groupNameObj = await db.onlyQuery('groups', 'id', nextGroup.groupId, ['groupName'])
+    modifys = {
+      groupName: groupNameObj[0].groupName,
+      groupDuty: nextGroup.groupDuty,
+      groupId: nextGroup.groupId,
+    }
+  } else {
+    modifys = {
+      groupName: null,
+      groupDuty: null,
+      groupId: null,
+    }
+  }
+  let conditions = {
     id: userId
   }
   try {
     await db.update('users', modifys, conditions)
     let result = await db.selfInOrDe('groups', 'member', 'id', groupId, false)
-    res.json(util.success(result))
+    res.json(util.success({result,myGrouList}))
   } catch (err) {
     next(err)
   }

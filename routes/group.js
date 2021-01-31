@@ -53,9 +53,16 @@ router.post('/createGroup', async (req, res, next) => {
             groupId: insertResult.insertId,
             groupDuty: 0,//代表组长
             groupName: groupName,
+            isSettle: 1//代表以及入驻过了
         }, conditions = {
             id: userId
         }
+        let manygroupsInsertData = {
+            groupId: insertResult.insertId,
+            userId,
+            groupDuty: 0
+        }
+        await db.insert('manygroups', manygroupsInsertData)
         let updateResult = await db.update('users', modifys, conditions)
         let onlyQueryResult = await db.onlyQuery('users', 'id', userId)
         console.log(updateResult)
@@ -70,6 +77,8 @@ router.get('/getGroupInfo', async (req, res, next) => {
         let userId = req.query.userId
         let multipleQuery = await db.multipleQuery('groupsfollow', { groupId, userId })
         let onlyQuery = await db.onlyQuery('groups', 'id', groupId)
+        let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+        onlyQuery[0].myGrouList = myGrouList
         multipleQuery.length ? onlyQuery[0].isFollow = true : onlyQuery[0].isFollow = false
         res.json(util.success(onlyQuery[0]))
 
@@ -80,6 +89,13 @@ router.get('/getGroupInfo', async (req, res, next) => {
 router.post('/joinGroup', async (req, res, next) => {
     try {
         let { groupName, userId, groupId, examine } = req.body
+        // let sql = `SELECT COUNT(*) num FROM manygroups WHERE userId = ${userId}`
+        // let numResult = await db.coreQuery(sql)
+        // if (numResult[0].num >= 5) {
+        //     console.log('66666666666')
+        //     return res.json(util.success(numResult[0]))
+        // }
+
         let groupDuty
         // -1代表审核中 2代表组员
         (examine === 1) ? groupDuty = -1 : groupDuty = 2
@@ -93,9 +109,16 @@ router.post('/joinGroup', async (req, res, next) => {
         if (groupDuty == 2) {
             await db.selfInOrDe('groups', 'member', 'id', groupId, true)
         }
+        let manygroupsInsertData = {
+            groupId,
+            userId,
+            groupDuty
+        }
         await db.update('users', modifys, conditions)
+        await db.insert('manygroups', manygroupsInsertData)
         let result = await db.onlyQuery('users', 'id', userId)
-        res.json(util.success(result[0]))
+        let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+        res.json(util.success({myGrouList,userInfo:result[0]}))
     } catch (err) {
         next(err)
     }
@@ -120,18 +143,37 @@ router.post('/modifyGroup', async (req, res, next) => {
     }
 })
 router.post('/dissolutionGroup', async (req, res, next) => {
-    let groupId = req.body.groupId
-    let modifys = {
-        groupName: null,
-        groupDuty: null,
-        groupId: null,
-    }, conditions = {
-        groupId
+    let { groupId, userId } = req.body
+    await db.deleteData('manygroups', {
+        groupId,
+        userId
+      })
+      let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+  let modifys
+  if (myGrouList.length) {
+    let nextGroup = myGrouList[myGrouList.length - 1]
+    let groupNameObj = await db.onlyQuery('groups', 'id', nextGroup.groupId, ['groupName'])
+    
+    modifys = {
+      groupName: groupNameObj[0].groupName,
+      groupDuty: nextGroup.groupDuty,
+      groupId: nextGroup.groupId,
+    }
+  } else {
+    modifys = {
+      groupName: null,
+      groupDuty: null,
+      groupId: null,
+      isSettle: 0
+    }
+  }
+    let conditions = {
+        id:userId
     }
     try {
         await db.update('users', modifys, conditions)
         let deleteResult = await db.deleteData('groups', { id: groupId })
-        res.json(util.success(deleteResult))
+        res.json(util.success({result:deleteResult,myGrouList}))
     } catch (err) {
         next(err)
     }
@@ -161,8 +203,6 @@ router.post('/followGroup', (req, res, next) => {
     }).catch(err => next(err))
 
 })
-
-
 router.get('/pagingGetGroup', async (req, res, next) => {
     let { pageSize, pageIndex, groupName } = req.query
     try {
@@ -173,5 +213,36 @@ router.get('/pagingGetGroup', async (req, res, next) => {
         next(err)
     }
 })
+router.get('/myGroup', async (req, res, next) => {
+    let userId = req.query.userId
+    try {
+        let sql = `SELECT t2.*,t1.groupDuty  FROM (select * from manygroups where userId = ${userId}) AS t1 INNER JOIN groups t2 ON t1.groupId = t2.id ORDER BY t1.id DESC`
+        let groups = await db.coreQuery(sql)
+        groups = await db.isFollow(groups, 'groupsfollow', userId, 'groupId')
+        res.json(util.success(groups))
+    } catch (err) {
+        next(err)
+    }
+})
+
+router.post('/switchGroup', async (req, res, next) => {
+    let { groupId, groupName, groupDuty, userId } = req.body
+    try {
+        let modifys = {
+            groupId,
+            groupName,
+            groupDuty,
+        }, conditions = {
+            id: userId
+        }
+        let updateResult = await db.update('users', modifys, conditions)
+        res.send(util.success(updateResult))
+    } catch (err) {
+        next(err)
+    }
+
+})
+
+
 
 module.exports = router;
