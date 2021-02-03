@@ -45,7 +45,7 @@ router.post('/createGroup', async (req, res, next) => {
         let queryResult = await db.onlyQuery('groups', 'groupName', groupName)
         if (queryResult.length) return res.send(util.fail('小组名称已存在，请重新修改'))
         let insertData = {
-            privates, examine, introduce, groupLogo, groupName
+            privates, examine, introduce, groupLogo, groupName, userId
         }
         let insertResult = await db.insert('groups', insertData)
         await db.selfInOrDe('groups', 'member', 'id', insertResult.insertId, true)
@@ -118,7 +118,7 @@ router.post('/joinGroup', async (req, res, next) => {
         await db.insert('manygroups', manygroupsInsertData)
         let result = await db.onlyQuery('users', 'id', userId)
         let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
-        res.json(util.success({myGrouList,userInfo:result[0]}))
+        res.json(util.success({ myGrouList, userInfo: result[0] }))
     } catch (err) {
         next(err)
     }
@@ -147,33 +147,33 @@ router.post('/dissolutionGroup', async (req, res, next) => {
     await db.deleteData('manygroups', {
         groupId,
         userId
-      })
-      let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
-  let modifys
-  if (myGrouList.length) {
-    let nextGroup = myGrouList[myGrouList.length - 1]
-    let groupNameObj = await db.onlyQuery('groups', 'id', nextGroup.groupId, ['groupName'])
-    
-    modifys = {
-      groupName: groupNameObj[0].groupName,
-      groupDuty: nextGroup.groupDuty,
-      groupId: nextGroup.groupId,
+    })
+    let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+    let modifys
+    if (myGrouList.length) {
+        let nextGroup = myGrouList[myGrouList.length - 1]
+        let groupNameObj = await db.onlyQuery('groups', 'id', nextGroup.groupId, ['groupName'])
+
+        modifys = {
+            groupName: groupNameObj[0].groupName,
+            groupDuty: nextGroup.groupDuty,
+            groupId: nextGroup.groupId,
+        }
+    } else {
+        modifys = {
+            groupName: null,
+            groupDuty: null,
+            groupId: null,
+            isSettle: 0
+        }
     }
-  } else {
-    modifys = {
-      groupName: null,
-      groupDuty: null,
-      groupId: null,
-      isSettle: 0
-    }
-  }
     let conditions = {
-        id:userId
+        id: userId
     }
     try {
         await db.update('users', modifys, conditions)
         let deleteResult = await db.deleteData('groups', { id: groupId })
-        res.json(util.success({result:deleteResult,myGrouList}))
+        res.json(util.success({ result: deleteResult, myGrouList }))
     } catch (err) {
         next(err)
     }
@@ -242,6 +242,7 @@ router.post('/switchGroup', async (req, res, next) => {
     }
 
 })
+
 
 
 
