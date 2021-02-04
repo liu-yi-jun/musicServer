@@ -114,11 +114,15 @@ router.post('/joinGroup', async (req, res, next) => {
             userId,
             groupDuty
         }
-        await db.update('users', modifys, conditions)
+        let result
+        if (groupDuty !== -1) {
+            await db.update('users', modifys, conditions)
+            result = await db.onlyQuery('users', 'id', userId)
+        }
         await db.insert('manygroups', manygroupsInsertData)
-        let result = await db.onlyQuery('users', 'id', userId)
+
         let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
-        res.json(util.success({ myGrouList, userInfo: result[0] }))
+        res.json(util.success({ myGrouList, userInfo: result ? result[0] : result }))
     } catch (err) {
         next(err)
     }
@@ -216,7 +220,7 @@ router.get('/pagingGetGroup', async (req, res, next) => {
 router.get('/myGroup', async (req, res, next) => {
     let userId = req.query.userId
     try {
-        let sql = `SELECT t2.*,t1.groupDuty  FROM (select * from manygroups where userId = ${userId}) AS t1 INNER JOIN groups t2 ON t1.groupId = t2.id ORDER BY t1.id DESC`
+        let sql = `SELECT t2.*,t1.groupDuty  FROM (select * from manygroups where userId = ${userId} and groupDuty != -1)  AS t1 INNER JOIN groups t2 ON t1.groupId = t2.id ORDER BY t1.id DESC`
         let groups = await db.coreQuery(sql)
         groups = await db.isFollow(groups, 'groupsfollow', userId, 'groupId')
         res.json(util.success(groups))
@@ -243,23 +247,52 @@ router.post('/switchGroup', async (req, res, next) => {
 
 })
 
-router.get('/agreeApply', async (req, res, next) => {
+router.post('/agreeApply', async (req, res, next) => {
     let {
-      userId
+        userId,
+        groupId
     } = req.body
     try {
-      let modifys = {
-          groupDuty: 2,
+        let modifys = {
+            groupDuty: 2,
         },
-        conditions = {
-          id: userId
-        }
-      let updateResult = await db.update('users', modifys, conditions)
-      res.json(util.success(updateResult))
+            conditions = {
+                id: userId,
+                groupId
+            }
+        // let updateResult = await db.update('users', modifys, conditions)
+        // modifys = {
+        //     groupDuty: 2,
+        // }
+        // conditions = {
+        //     id: userId
+        // }
+        let updateResult = await db.update('manygroups', modifys, conditions)
+        res.json(util.success(updateResult))
     } catch (err) {
-      next(err)
+        next(err)
     }
-  })
+})
+
+router.post('/refuseApply', async (req, res, next) => {
+    let {
+        userId,
+        groupId
+    } = req.body
+    try {
+
+        let deleteResult = await db.deleteData('manygroups', {
+            groupId,
+            userId
+        })
+
+        res.json(util.success(deleteResult))
+    } catch (err) {
+        next(err)
+    }
+})
+
+
 
 
 
