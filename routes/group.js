@@ -243,6 +243,23 @@ router.post('/switchGroup', async (req, res, next) => {
 
 })
 
+router.get('/agreeApply', async (req, res, next) => {
+    let {
+      userId
+    } = req.body
+    try {
+      let modifys = {
+          groupDuty: 2,
+        },
+        conditions = {
+          id: userId
+        }
+      let updateResult = await db.update('users', modifys, conditions)
+      res.json(util.success(updateResult))
+    } catch (err) {
+      next(err)
+    }
+  })
 
 
 
