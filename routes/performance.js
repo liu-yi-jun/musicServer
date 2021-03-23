@@ -6,8 +6,8 @@ let util = require('../util/util')
 router.get('/getFestival', async (req, res, next) => {
     let { pageSize, pageIndex, userId } = req.query
     try {
-        let some = ['id','price','showTime','showCity','showAddress','showTitle','showPoster','showTicket','share','store','comment','likes']
-        let musicfestivals = await db.paging('musicfestival', pageSize, pageIndex, {}, ["showCity = '杭州' desc, id"],some)
+        let some = ['id', 'price', 'showTime', 'showCity', 'showAddress', 'showTitle', 'showPoster', 'showTicket', 'share', 'store', 'comment', 'likes']
+        let musicfestivals = await db.paging('musicfestival', pageSize, pageIndex, {}, ["showCity = '杭州' desc, id"], some)
         // let musicfestivals = await db.paging('musicfestival', pageSize, pageIndex, {}, ["id desc"],some)
         let p1 = db.isLike(musicfestivals, 'musicfestivallike', userId, 'musicfestivalId')
         let p2 = db.isStore(musicfestivals, 'musicfestivalstore', userId, 'musicfestivalId')
@@ -22,8 +22,8 @@ router.get('/getFestival', async (req, res, next) => {
 router.get('/getLiveHouse', async (req, res, next) => {
     let { pageSize, pageIndex, userId } = req.query
     try {
-        let some = ['id','price','showTime','showCity','showAddress','showTitle','showPoster','showTicket','share','store','comment','likes']
-        let livehouses = await db.paging('livehouse', pageSize, pageIndex, {}, ["showCity = '杭州' desc, id"],some)
+        let some = ['id', 'price', 'showTime', 'showCity', 'showAddress', 'showTitle', 'showPoster', 'showTicket', 'share', 'store', 'comment', 'likes']
+        let livehouses = await db.paging('livehouse', pageSize, pageIndex, {}, ["showCity = '杭州' desc, id"], some)
         // let livehouses = await db.paging('livehouse', pageSize, pageIndex, {}, ["id desc"],some)
         let p1 = db.isLike(livehouses, 'livehouselike', userId, 'livehouseId')
         let p2 = db.isStore(livehouses, 'livehousestore', userId, 'livehouseId')
@@ -114,7 +114,7 @@ router.get('/musicfestivalComment', async (req, res, next) => {
 router.post('/livehouseLike', (req, res, next) => {
     let relation = req.body.relation
     let operate = req.body.operate
-    console.log('relation',relation,'operate',operate)
+    console.log('relation', relation, 'operate', operate)
     let data = {
         mainTable: {
             name: 'livehouse',
@@ -188,18 +188,30 @@ router.get('/livehouseDetail', async (req, res, next) => {
 })
 
 router.get('/myStorePerformance', async (req, res, next) => {
+    let { pageSize, pageIndex, userId } = req.query
     try {
-        let { pageSize, pageIndex, userId } = req.query
-        let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
-        let storeAlliance = await db.paging('alliancestore', pageSize, pageIndex, { userId }, ['id DESC'])
-        if (!storeAlliance.length) {
-            return res.json(util.success([]))
-        }
-        let result = await db.arrIdQuery(storeAlliance, 'alliance', 'allianceId', (item) => {
-            item.pictureUrls = JSON.parse(item.pictureUrls)
-        }, some)
-        console.log('1111111111111', result)
-        return res.json(util.success(result))
+        pageSize = Math.ceil(pageSize / 2)
+        let sql1 = `SELECT t2.id, t2.price,t2.showTime,t2.showCity,t2.showAddress,t2.showTitle,t2.showPoster,t2.showTicket,t2.share,t2.store,t2.comment,t2.likes from (select * from musicfestivalstore where userId = ${userId})  AS t1 INNER JOIN musicfestival t2 ON t1.musicfestivalId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let sql2 = `SELECT t2.id, t2.price,t2.showTime,t2.showCity,t2.showAddress,t2.showTitle,t2.showPoster,t2.showTicket,t2.share,t2.store,t2.comment,t2.likes from (select * from livehousestore where userId = ${userId})  AS t1 INNER JOIN livehouse t2 ON t1.livehouseId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        
+        let musicfestivals = await db.coreQuery(sql1)
+        let livehouses = await db.coreQuery(sql2)
+        let p1 = db.isLike(musicfestivals, 'musicfestivallike', userId, 'musicfestivalId')
+        musicfestivals.forEach(item => {
+            item.isStore = true
+            item.tableName = 'musicfestival'
+        })
+        let p2 = db.isLike(livehouses, 'livehouselike', userId, 'livehouseId')
+        livehouses.forEach(item => {
+            item.isStore = true
+            item.tableName = 'livehouse'
+        })
+
+        Promise.all([p1, p2]).then((result) => {
+            let performaces = result[0].concat(result[1])
+            return res.json(util.success(performaces))
+        })
+
     } catch (err) {
         next(err)
     }

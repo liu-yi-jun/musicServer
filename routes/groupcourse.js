@@ -12,9 +12,9 @@ router.post('/addCourse', (req, res, next) => {
 })
 
 router.get('/getCourses', (req, res, next) => {
-    let { pageSize, pageIndex } = req.query
+    let { pageSize, pageIndex ,groupId} = req.query
     let some = ['id', 'groupId', 'groupName', 'userId', 'avatarUrl', 'nickName', 'posterUrl', 'courseName', 'views', 'store']
-    db.paging('groupcourse', pageSize, pageIndex, {}, ['id DESC'], some).then(result => {
+    db.paging('groupcourse', pageSize, pageIndex, {groupId}, ['id DESC'], some).then(result => {
         res.json(util.success(result))
     }).catch(err => next(err))
 })
@@ -99,6 +99,19 @@ router.post('/groupcourseStore', (req, res, next) => {
 
 })
 
+
+router.post('/groupcourseDelete', async (req, res, next) => {
+    try {
+        const { id, tableName } = req.body
+        let result = await db.deleteData(tableName, { id })
+        await db.deleteData('comment', { theme: tableName, themeId: id })
+        res.send(util.success(result))
+    } catch (err) {
+        next(err)
+    }
+})
+
+
 router.get('/courseCommont', async (req, res, next) => {
     try {
         let { pageSize, pageIndex, id } = req.query
@@ -113,13 +126,12 @@ router.get('/courseCommont', async (req, res, next) => {
 router.get('/myStoreCourse', async (req, res, next) => {
     try {
         let { pageSize, pageIndex, userId } = req.query
-        let some = ['id', 'groupId', 'groupName', 'userId', 'avatarUrl', 'nickName', 'posterUrl', 'courseName', 'views', 'store']
-        let storeCourse = await db.paging('groupcoursestore', pageSize, pageIndex, { userId }, ['id DESC'])
-        if (!storeCourse.length) {
-            return res.json(util.success([]))
+        try {
+            let sql = `SELECT t2.id, t2.groupId,t2.groupName,t2.userId,t2.avatarUrl,t2.nickName,t2.posterUrl ,t2.courseName, t2.views,t2.store from (select * from groupcoursestore where userId = ${userId})  AS t1 INNER JOIN groupcourse t2 ON t1.groupcourseId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+            let result = await db.coreQuery(sql)
+            res.json(util.success(result))
+        } catch (err) {
         }
-        let result = await db.arrIdQuery(storeCourse, 'groupcourse', 'groupcourseId', undefined, some)
-        res.json(util.success(result))
     } catch (err) {
         next(err)
     }

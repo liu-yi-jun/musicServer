@@ -2,6 +2,7 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+let request = require('request');
 var logger = require('morgan');
 // 引入数据库操作
 var db = require('./db/db');
@@ -32,6 +33,12 @@ var performance = require('./routes/performance');
 var tap = require('./routes/tap');
 let handleToken = require('./util/handleToken')
 let svg = require('./routes/svg')
+let security = require('./routes/security')
+let wx = require('./config/config').wx
+// 获取access_token
+let accessToken = require('./util/access_token')
+accessToken.start()
+
 
 const schedule = require('node-schedule');
 const scheduleCronstyle = () => {
@@ -81,6 +88,7 @@ app.use((req, res, next) => {
 
 
 app.use('/api/user', usersRouter);
+app.use('/api', security);
 app.use('/api/group', groupRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/groupdynamics', groupdynamics);

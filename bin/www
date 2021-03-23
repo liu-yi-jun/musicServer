@@ -12,9 +12,15 @@ var fs = require('fs')
 var path = require('path');
 
 
+// let pfxpath = __dirname + '/test.com.pfx'; //
+// let passpath = __dirname + '/testkey.txt';
+// let options = {
+//     pfx: fs.readFileSync(pfxpath),
+//     passphrase: fs.readFileSync(passpath),
+// };
 var options = {
-  key: fs.readFileSync(path.join(__dirname, '../security/4990962_www.eigene.cn.key')),
-  cert: fs.readFileSync(path.join(__dirname, '../security/4990962_www.eigene.cn.pem')),
+  key: fs.readFileSync(path.join(__dirname, '../security/5290807_shengruo.top.key')),
+  cert: fs.readFileSync(path.join(__dirname, '../security/5290807_shengruo.top.pem')),
 }
 
 
@@ -22,7 +28,7 @@ var options = {
  * Get port from environment and store in Express.
  */
 
-// var port = normalizePort(process.env.PORT || '3000');
+// var port = normalizePort(process.env.PORT || '443');
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 

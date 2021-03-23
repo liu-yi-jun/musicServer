@@ -165,31 +165,38 @@ router.post('/updateUserInfo', async (req, res, next) => {
 router.get('/groupAdmini', (req, res, next) => {
   // 用户id
   let groupId = req.query.groupId
-  let sql = `select * from users where (groupDuty=0 or groupDuty=1) and groupId = ${groupId}`
+  let sql = `SELECT t2.*  FROM (select * from manygroups where (groupDuty=0 or groupDuty=1) and groupId = ${groupId}) AS t1 INNER JOIN users t2 ON t1.userId = t2.id `
+  // let sql = `select * from users where (groupDuty=0 or groupDuty=1) and groupId = ${groupId}`
   db.coreQuery(sql).then(queryResult => res.json(util.success(queryResult))).catch(err => next(err))
 
 })
 router.get('/groupMember', (req, res, next) => {
   let groupId = req.query.groupId
-  let sql = `select * from users where groupDuty=2 and groupId = ${groupId}`
+  // let sql = `select * from users where groupDuty=2 and groupId = ${groupId}`
+  let sql = `SELECT t2.*  FROM (select * from manygroups where groupDuty=2 and groupId = ${groupId}) AS t1 INNER JOIN users t2 ON t1.userId = t2.id `
   db.coreQuery(sql).then(queryResult => res.json(util.success(queryResult))).catch(err => next(err))
 
 })
 router.get('/searchGroupMember', (req, res, next) => {
   let { groupId, nickName } = req.query
-  let sql = `select * from users where groupDuty=2 and groupId = ${groupId} and nickName like '%${nickName}%'`
+  // let sql = `select * from users where groupDuty=2 and groupId = ${groupId} and nickName like '%${nickName}%'`
+  let sql = `SELECT t2.*  FROM (select * from manygroups where groupDuty=2 and groupId = ${groupId} ) AS t1 INNER JOIN users t2 ON t1.userId = t2.id where nickName like '%${nickName}%'`
   db.coreQuery(sql).then(queryResult => res.json(util.success(queryResult))).catch(err => next(err))
 
 })
-router.post('/addManage', (req, res, next) => {
-  let id = req.body.userId
+router.post('/addManage', async (req, res, next) => {
+  let { userId, groupId } = req.body
   let modifys = {
     groupDuty: 1
   }, conditions = {
-    id,
+    id: userId
   }
-  db.update('users', modifys, conditions).then(result => res.json(util.success(result))).catch(err => next(err))
-
+  let groupIds = await db.multipleQuery('users', { id: userId }, ['groupId'])
+  if (groupIds[0].groupId === groupId) {
+    await db.update('users', modifys, conditions)
+  }
+  let updateResult = await db.update('manygroups', modifys, { userId, groupId })
+  res.json(util.success(updateResult))
 })
 router.post('/signOutGroup', async (req, res, next) => {
   let { groupId, userId } = req.body
@@ -221,7 +228,7 @@ router.post('/signOutGroup', async (req, res, next) => {
   try {
     await db.update('users', modifys, conditions)
     let result = await db.selfInOrDe('groups', 'member', 'id', groupId, false)
-    res.json(util.success({result,myGrouList}))
+    res.json(util.success({ result, myGrouList }))
   } catch (err) {
     next(err)
   }

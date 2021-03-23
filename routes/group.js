@@ -53,14 +53,15 @@ router.post('/createGroup', async (req, res, next) => {
             groupId: insertResult.insertId,
             groupDuty: 0,//代表组长
             groupName: groupName,
-            isSettle: 1//代表以及入驻过了
+            // isSettle: 1//代表以及入驻过了
         }, conditions = {
             id: userId
         }
         let manygroupsInsertData = {
             groupId: insertResult.insertId,
             userId,
-            groupDuty: 0
+            groupDuty: 0,
+            time: Date.now()
         }
         await db.insert('manygroups', manygroupsInsertData)
         let updateResult = await db.update('users', modifys, conditions)
@@ -73,11 +74,13 @@ router.post('/createGroup', async (req, res, next) => {
 })
 router.get('/getGroupInfo', async (req, res, next) => {
     try {
-        let groupId = req.query.groupId
-        let userId = req.query.userId
+        let { groupId, userId, visit } = req.query
         let multipleQuery = await db.multipleQuery('groupsfollow', { groupId, userId })
         let onlyQuery = await db.onlyQuery('groups', 'id', groupId)
         let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+        if (visit) {
+            db.selfInOrDe('groups', 'visitNumber', 'id', groupId, true)
+        }
         onlyQuery[0].myGrouList = myGrouList
         multipleQuery.length ? onlyQuery[0].isFollow = true : onlyQuery[0].isFollow = false
         res.json(util.success(onlyQuery[0]))
@@ -107,22 +110,29 @@ router.post('/joinGroup', async (req, res, next) => {
             id: userId
         }
         if (groupDuty == 2) {
-            await db.selfInOrDe('groups', 'member', 'id', groupId, true)
+            db.selfInOrDe('groups', 'member', 'id', groupId, true)
+        }
+        let userIdList
+        if (groupDuty == -1) {
+            let sql = `select userId from manygroups where groupId = ${groupId} and (groupDuty = 0 or groupDuty = 1)`
+            userIdList = await db.coreQuery(sql)
+            //   userIdList = [{ userId: 47 }]
         }
         let manygroupsInsertData = {
             groupId,
             userId,
-            groupDuty
+            groupDuty,
+            time: Date.now()
         }
-        let result
-        if (groupDuty !== -1) {
-            await db.update('users', modifys, conditions)
-            result = await db.onlyQuery('users', 'id', userId)
-        }
+
+
+        await db.update('users', modifys, conditions)
+        let result = await db.onlyQuery('users', 'id', userId)
+
         await db.insert('manygroups', manygroupsInsertData)
 
         let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
-        res.json(util.success({ myGrouList, userInfo: result ? result[0] : result }))
+        res.json(util.success({ myGrouList, userInfo: result ? result[0] : result, userIdList }))
     } catch (err) {
         next(err)
     }
@@ -210,19 +220,29 @@ router.post('/followGroup', (req, res, next) => {
 router.get('/pagingGetGroup', async (req, res, next) => {
     let { pageSize, pageIndex, groupName } = req.query
     try {
-        let sql = `SELECT * FROM groups where groupName like '%${groupName}%' LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let sql = `SELECT * FROM groups where groupName like '%${groupName}%' and privates = 0 LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
         let groups = await db.coreQuery(sql)
         res.json(util.success(groups))
     } catch (err) {
         next(err)
     }
 })
-router.get('/myGroup', async (req, res, next) => {
-    let userId = req.query.userId
+router.get('/pagingGetSettleGroup', async (req, res, next) => {
+    let { pageSize, pageIndex, userId } = req.query
     try {
-        let sql = `SELECT t2.*,t1.groupDuty  FROM (select * from manygroups where userId = ${userId} and groupDuty != -1)  AS t1 INNER JOIN groups t2 ON t1.groupId = t2.id ORDER BY t1.id DESC`
+        let sql = `SELECT t2.*,t1.groupDuty  FROM (select * from manygroups where userId = ${userId} and groupDuty = 0)  AS t1 INNER JOIN groups t2 ON t1.groupId = t2.id ORDER BY t1.id DESC  LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
         let groups = await db.coreQuery(sql)
-        groups = await db.isFollow(groups, 'groupsfollow', userId, 'groupId')
+        res.json(util.success(groups))
+    } catch (err) {
+        next(err)
+    }
+})
+
+router.get('/pagingGetJoinGroup', async (req, res, next) => {
+    let { pageSize, pageIndex, userId } = req.query
+    try {
+        let sql = `SELECT t2.*,t1.groupDuty  FROM (select * from manygroups where userId = ${userId} and (groupDuty = -1 or groupDuty = 1 or groupDuty = 2 ))  AS t1 INNER JOIN groups t2 ON t1.groupId = t2.id ORDER BY t1.id DESC  LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let groups = await db.coreQuery(sql)
         res.json(util.success(groups))
     } catch (err) {
         next(err)
@@ -250,25 +270,32 @@ router.post('/switchGroup', async (req, res, next) => {
 router.post('/agreeApply', async (req, res, next) => {
     let {
         userId,
-        groupId
+        groupId,
+        groupName
     } = req.body
     try {
         let modifys = {
             groupDuty: 2,
         },
             conditions = {
-                id: userId,
+                userId,
                 groupId
             }
-        // let updateResult = await db.update('users', modifys, conditions)
-        // modifys = {
-        //     groupDuty: 2,
-        // }
-        // conditions = {
-        //     id: userId
-        // }
-        let updateResult = await db.update('manygroups', modifys, conditions)
-        res.json(util.success(updateResult))
+        let groupDutys = await db.multipleQuery('manygroups', conditions, ['groupDuty'])
+        if (groupDutys.length && groupDutys[0].groupDuty === -1) {
+            db.selfInOrDe('groups', 'member', 'id', groupId, true)
+            let updateResult = await db.update('manygroups', modifys, conditions)
+            await db.update('users', { groupDuty: modifys.groupDuty, groupId, groupName }, { id: userId })
+            let sql = `select userId from manygroups where groupId = ${groupId} and (groupDuty = 0 or groupDuty = 1)`
+            let userIdList = await db.coreQuery(sql)
+            // userIdList = [{ userId: 47 }]
+            updateResult.userIdList = userIdList
+            updateResult.isControl = true
+            res.json(util.success(updateResult))
+        } else {
+            res.json(util.success({ affectedRows: 0 }))
+        }
+
     } catch (err) {
         next(err)
     }
@@ -280,13 +307,37 @@ router.post('/refuseApply', async (req, res, next) => {
         groupId
     } = req.body
     try {
+        let groupDutys = await db.multipleQuery('manygroups', { userId, groupId }, ['groupDuty'])
+        if (groupDutys.length && groupDutys[0].groupDuty === -1) {
+            let deleteResult = await db.deleteData('manygroups', { groupId, userId })
+            let groupIds = await db.multipleQuery('users', { id: userId }, ['groupId'])
+            if (groupIds[0].groupId === groupId) {
+                await db.update('users', { groupDuty: null, groupId: null, groupName: null }, { id: userId })
+                deleteResult.isControl = true
+            } else {
+                deleteResult.isControl = true
+            }
 
-        let deleteResult = await db.deleteData('manygroups', {
-            groupId,
-            userId
-        })
+            let sql = `select userId from manygroups where groupId = ${groupId} and (groupDuty = 0 or groupDuty = 1)`
+            let userIdList = await db.coreQuery(sql)
+            //   userIdList = [{ userId: 47 }]
+            deleteResult.userIdList = userIdList
+            res.json(util.success(deleteResult))
+        } else {
+            res.json(util.success({ affectedRows: 0 }))
+        }
+    } catch (err) {
+        next(err)
+    }
+})
+router.get('/newNumber', async (req, res, next) => {
+    try {
+        groupId = req.query.groupId
+        let weekTime = Date.now() - 7 * 24 * 3600 * 1000
+        let sql = `select COUNT(*) newNumber  from manygroups where groupId = ${groupId} and time >= ${weekTime} and groupDuty != -1`
+        let result = await db.coreQuery(sql)
+        res.json(util.success(result[0]))
 
-        res.json(util.success(deleteResult))
     } catch (err) {
         next(err)
     }

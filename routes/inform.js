@@ -65,11 +65,22 @@ function isStore(arr, userId) {
 
 router.post('/modifyInform', async (req, res, next) => {
     let { theme, themeId } = req.body
-    console.log(req.body,'req.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.bodyreq.body')
     db.update('notice', { isNew: 0 }, { theme, themeId }).then(result => {
         res.json(util.success(result))
     }).catch(err => next(err))
 })
+
+router.get('/noticeNumbe', async (req, res, next) => {
+    let { userId } = req.query
+    try {
+        let sql = `select COUNT(*) noticeNumbe from notice where otherId = ${userId} and isNew = 1`
+        let result = await db.coreQuery(sql)
+        res.json(util.success(result[0]))
+    } catch (err) {
+        next(err)
+    }
+})
+
 
 
 

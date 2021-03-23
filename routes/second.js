@@ -160,7 +160,16 @@ router.post('/secondStore', (req, res, next) => {
     }).catch(err => next(err))
 
 })
-
+router.post('/secondDelete', async (req, res, next) => {
+    try {
+        const { id, tableName } = req.body
+        let result = await db.deleteData(tableName, { id })
+        await db.deleteData('comment', { theme: tableName, themeId: id })
+        res.send(util.success(result))
+    } catch (err) {
+        next(err)
+    }
+})
 
 
 
