@@ -12,9 +12,9 @@ router.post('/addCourse', (req, res, next) => {
 })
 
 router.get('/getCourses', (req, res, next) => {
-    let { pageSize, pageIndex } = req.query
+    let { pageSize, pageIndex ,groupId} = req.query
     let some = ['id', 'groupId', 'groupName', 'userId', 'avatarUrl', 'nickName', 'posterUrl', 'courseName', 'views', 'store']
-    db.paging('groupcourse', pageSize, pageIndex, {}, ['id DESC'], some).then(result => {
+    db.paging('groupcourse', pageSize, pageIndex, {groupId}, ['id DESC'], some).then(result => {
         res.json(util.success(result))
     }).catch(err => next(err))
 })
@@ -98,6 +98,19 @@ router.post('/groupcourseStore', (req, res, next) => {
     }).catch(err => next(err))
 
 })
+
+
+router.post('/groupcourseDelete', async (req, res, next) => {
+    try {
+        const { id, tableName } = req.body
+        let result = await db.deleteData(tableName, { id })
+        await db.deleteData('comment', { theme: tableName, themeId: id })
+        res.send(util.success(result))
+    } catch (err) {
+        next(err)
+    }
+})
+
 
 router.get('/courseCommont', async (req, res, next) => {
     try {

@@ -156,5 +156,14 @@ router.post('/ticketStore', (req, res, next) => {
 
 })
 
-
+router.post('/ticketDelete', async (req, res, next) => {
+    try {
+        const { id, tableName } = req.body
+        let result = await db.deleteData(tableName, { id })
+        await db.deleteData('comment', { theme: tableName, themeId: id })
+        res.send(util.success(result))
+    } catch (err) {
+        next(err)
+    }
+})
 module.exports = router;

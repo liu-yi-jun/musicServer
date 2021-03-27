@@ -40,7 +40,7 @@ let react = {
     let str
     if (fret === -1) {
       str = `<text
-      font-size='0.7rem'
+      font-size='0.6rem'
       fill='#fff'
       font-family='Verdana'
       text-anchor='middle'
@@ -50,7 +50,7 @@ let react = {
     } else {
       str = `<g>
       <circle
-        stroke-width='0.25'
+        stroke-width='0.75'
         stroke='#fff'
         fill='${fret === 0 ? 'transparent' : '#fff'}'
         cx='${getStringPosition(string, strings)}'
@@ -119,7 +119,7 @@ let react = {
     if (baseFret === 1) {
       str1 = `<path
       stroke='#fff'
-      stroke-width='2'
+      stroke-width='2.5'
       stroke-linecap='round'
       stroke-linejoin='round'
       d='${`M ${offsets[strings].x} 0 H ${offsets[strings].length}`}'
@@ -149,7 +149,7 @@ let react = {
     return ` <g>
   <path
     stroke='#fff'
-    stroke-width='0.25'
+    stroke-width='0.75'
     stroke-linecap='square'
     stroke-linejoin='square'
     d='${getNeckPath(strings, fretsOnChord)}'/>${str1}${str2}</g>`
@@ -235,7 +235,7 @@ let react = {
     }
 
     let str2 = barreFrets.map(fret => `<circle
-  stroke-width='0.25'
+  stroke-width='0.75'
   stroke='#fff'
   fill='#fff'
   cx='${getStringPosition(strings - fret.position, strings)}'
@@ -412,7 +412,7 @@ router.get('/getGuitar', (req, res, next) => {
   let standard
   if (name === 'guitar') {
     name = 'Guitar'
-    standard = ['E', 'A', 'D', 'G', 'B', 'E']
+    standard = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
     var contents = fs.readFileSync(__dirname + "/../data/guitar.json");
   } else if (name === 'ukelele') {
     name = 'Ukelele'
@@ -428,6 +428,7 @@ router.get('/getGuitar', (req, res, next) => {
   let main = contents.main
   let keys = contents.keys
   let chordObj, chord
+  if(!chords) return next('无该和弦')
   chords.forEach((item, index) => {
     if (item.suffix == suffix) {
       chordObj = chords[index]
@@ -475,9 +476,14 @@ router.get('/getGuitar', (req, res, next) => {
     }
     chordUrls.push(`${baseUrl}/svg/${name}/${key}${suffix}-v${index}.svg`)
   })
-  contents.chordUrls = chordUrls
-  res.json(util.success(contents))
+  res.json(util.success({chordUrls}))
 })
 
 
 module.exports = router;
+
+
+
+
+
+

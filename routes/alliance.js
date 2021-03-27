@@ -102,8 +102,9 @@ router.post('/allianceLike', (req, res, next) => {
     }, () => {
         if (extra.userId != extra.otherId) {
             let sql = `DELETE FROM notice WHERE userId = ${relation.userId} and theme = '${data.mainTable.name}' and themeId = ${data.mainTable.id}`
+            return db.coreQuery(sql)
         }
-        return db.coreQuery(sql)
+
     }).then(result => {
         res.json(util.success(result))
     }).catch(err => next(err))
@@ -132,6 +133,31 @@ router.post('/allianceStore', (req, res, next) => {
     }).catch(err => next(err))
 
 })
+
+router.post('/allianceDelete', async (req, res, next) => {
+    try {
+        const { id, tableName } = req.body
+        let result = await db.deleteData(tableName, { id })
+        await db.deleteData('comment', { theme: tableName, themeId: id })
+        res.send(util.success(result))
+    } catch (err) {
+        next(err)
+    }
+})
+
+router.get('/myStoreAlliance', async (req, res, next) => {
+    let { pageSize, pageIndex, userId } = req.query
+    try {
+        let sql = `SELECT t2.id, t2.userId,t2.title,t2.pictureUrls,t2.groupId,t2.activityTime,t2.organization ,t2.groupName, t2.nickName,t2.avatarUrl from (select * from alliancestore where userId = ${userId})  AS t1 INNER JOIN alliance t2 ON t1.allianceId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+        let alliances = await db.coreQuery(sql)
+        alliances.forEach(item => {
+           item.pictureUrls = JSON.parse(item.pictureUrls)
+        })
+        res.json(util.success(alliances))
+    } catch (err) {
+    }
+})
+
 
 
 module.exports = router;
