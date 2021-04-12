@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var db = require('../db/db');
+const subscribe = require('../util/subscribe');
 let util = require('../util/util')
 
 
@@ -40,7 +41,6 @@ router.post('/followSecond', async (req, res, next) => {
     next(err)
   }
 })
-
 
 router.get('/searchSeconds', async (req, res, next) => {
   try {
@@ -123,8 +123,21 @@ router.post('/secondLike', (req, res, next) => {
   extra.theme = data.mainTable.name
   extra.themeId = relation.themeId
   extra.isNew = 1
+  extra.type = 0
   db.operateLSF(data, () => {
     if (extra.userId != extra.otherId) {
+      subscribe.sendSubscribeInfo({
+        otherId: extra.otherId,
+        template_id: subscribe.InfoId.like,
+        "data": {
+          "thing1": {
+            "value": util.cutstr(extra.themeTitle, 16)
+          },
+          "name2": {
+            "value": util.cutstr(extra.nickName, 16)
+          }
+        }
+      })
       return db.insert('notice', extra)
     }
   }, () => {
@@ -167,6 +180,22 @@ router.post('/secondDelete', async (req, res, next) => {
     let result = await db.deleteData(tableName, { id })
     await db.deleteData('comment', { theme: tableName, themeId: id })
     res.send(util.success(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/mySecond', async (req, res, next) => {
+  try {
+    let { pageSize, pageIndex, userId } = req.query
+    let sql = `SELECT * FROM second where userId = ${userId} ORDER BY id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let second = await db.coreQuery(sql)
+    second.forEach(item => {
+      item.isStore = true
+      item.pictureUrls = JSON.parse(item.pictureUrls)
+      item.additional = util.cutstr(item.additional, 50)
+    })
+    return res.json(util.success(second))
   } catch (err) {
     next(err)
   }

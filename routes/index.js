@@ -56,7 +56,25 @@ router.get('/myRelease', async (req, res, next) => {
     next(err)
   }
 })
-
-
+router.post('/feedback', async (req, res, next) => {
+  let params = req.body
+  try {
+    params.type = 0
+    params.date = new Date().getTime()
+    db.insert('feedback', params).then(result => res.json(util.success(result))).catch(err => next(err))
+  } catch (err) {
+    next(err)
+  }
+})
+router.post('/report', async (req, res, next) => {
+  let params = req.body
+  params.type = 1
+  params.date = new Date().getTime()
+  try {
+    db.insert('feedback', params).then(result => res.json(util.success(result))).catch(err => next(err))
+  } catch (err) {
+    next(err)
+  }
+})
 
 module.exports = router;

@@ -1,24 +1,25 @@
 /**
  * 公共函数定义
  */
+
 let createHash = require('create-hash');
 module.exports = {
   // 生成随机数
-  createNonceStr() {
+  createNonceStr () {
     return Math.random().toString(36).substr(2, 15);
   },
   // 生成时间戳
-  createTimeStamp() {
+  createTimeStamp () {
     return parseInt(new Date().getTime() / 1000) + ''
   },
   // 生成签名
-  getSign(params, key) {
+  getSign (params, key) {
     let string = this.raw(params) + '&key=' + key;
     let sign = createHash('md5').update(string).digest('hex');
     return sign.toUpperCase();
   },
   // 生成系统的交易订单号
-  getTradeId(type = 'wx') {
+  getTradeId (type = 'wx') {
     let date = new Date().getTime().toString();
     let text = '';
     let possible = '0123456789';
@@ -28,7 +29,7 @@ module.exports = {
     return (type == 'wx' ? 'ImoocWxJuZi' : 'ImoocMpJuZi') + date + text;
   },
   // Object 转换成json并排序
-  raw(args) {
+  raw (args) {
     let keys = Object.keys(args).sort();
     let obj = {};
     keys.forEach((key) => {
@@ -55,8 +56,8 @@ module.exports = {
   //     return this.fail(err);
   //   }
   // },
-  add0(m) { return m < 10 ? '0' + m : m },
-  format(shijianchuo) {
+  add0 (m) { return m < 10 ? '0' + m : m },
+  format (shijianchuo) {
     //shijianchuo是整数，否则要parseInt转换
     var time = new Date(shijianchuo);
     var y = time.getFullYear();
@@ -68,7 +69,7 @@ module.exports = {
     // return y+'-'+add0(m)+'-'+add0(d)+' '+add0(h)+':'+add0(mm)+':'+add0(s);
     return y + '-' + this.add0(m) + '-' + this.add0(d);
   },
-  handleDate(stamp){
+  handleDate (stamp) {
     var time = new Date(stamp);
     var y = time.getFullYear();
     var m = time.getMonth() + 1;
@@ -78,21 +79,21 @@ module.exports = {
     var s = time.getSeconds();
     return `${y}-${this.add0(m)}-${this.add0(d)} ${this.add0(h)}:${this.add0(mm)}`
   },
-  success(data = {}, message) {
+  success (data = {}, message) {
     return {
       code: 0,
       data,
       message: JSON.stringify(message)
     }
   },
-  fail(message = '') {
+  fail (message = '') {
     return {
       code: -1,
       message: JSON.stringify(message)
     }
   },
   // JS字符串长度判断,超出进行自动截取(支持中文)
-  cutstr(str, len) {
+  cutstr (str, len) {
     if (!str) return str
     var str_length = 0;
     var str_len = 0;
@@ -116,7 +117,7 @@ module.exports = {
       return str;
     }
   },
-  getDateDiff(dateTimeStamp) {
+  getDateDiff (dateTimeStamp) {
     if (typeof dateTimeStamp === "string") {
       return dateTimeStamp
     }

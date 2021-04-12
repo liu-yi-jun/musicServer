@@ -21,8 +21,17 @@ module.exports = {
   resource: {
     // baseUrl: "http://localhost:3000"
     baseUrl: "http://192.168.31.40:3000"
+    // baseUrl: "http://192.168.0.145:3000"
     // baseUrl: 'https://www.shengruo.top'
     // baseUrl:"https://eigene.cn"
     // baseUrl:"http://eigene.free.idcfengye.com"
+  },
+  InfoId: {
+    like: 'b_JFxHhkQlp9nvVXyH2EEzlO2meF71EY0RJFTXCmpUQ',
+    content: 'gSZolmS3oikRODqlJy0LGyrWtJgRZv2wV05CZBmW8ko',
+    reply: 'OhXH6fGsvmuAQGzrTBZYnggUlasZfqBjd0xzFvgZtjI',
+    band: 'm1ULncMbn3rDVirXA_2-EoLHtmRWSsVc3Fg8NlCWW_s',
+    joinGroup: 'gVM-0N8z4sipyh4riEaEUrSuRVusfgsfk6U3DrDV_-w',
+    examine: 'HDFi5dRAZ-sWt-J7LJ6OR59Oc3hgAqtOTqyfosR3qX4',
   }
 }

@@ -14,6 +14,8 @@ router.post('*', async (req, res, next) => {
   for (i in body) {
     str = str + body[i]
   }
+  if (!str) return next()
+  console.log(str, 1111);
   request.post({
     url,
     body: {
@@ -22,6 +24,7 @@ router.post('*', async (req, res, next) => {
     json: true
   }, (err, response, body) => {
     if (err) return next(err)
+    console.log(body, 22222);
     if (body.errcode) {
       next(`内容含有违法违规内容`)
     } else {

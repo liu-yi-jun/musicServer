@@ -4,17 +4,22 @@ var db = require('../db/db');
 let util = require('../util/util')
 let request = require('request');
 let wx = require('../config/config').wx
+const crypto = require('crypto');
 let handleToken = require('../util/handleToken')
 
+function hmac (data) {
+  let hmac = crypto.createHmac('md5', 'liuyijun');
+  return hmac.update(data).digest('hex');
+}
 
 router.get('/getToken', (req, res, next) => {
   let code = req.query.code
   let sessionUrl = `https://api.weixin.qq.com/sns/jscode2session?appid=${wx.appId}&secret=${wx.appSecret}&js_code=${code}&grant_type=authorization_code`
   request(sessionUrl, async (err, response, body) => {
     let data = JSON.parse(body);
-    console.log(data)
     if (data.errmsg) return res.json(util.fail(data.errmsg))
     try {
+      // data.openid = hmac(data.openid);
       let token = handleToken.createToken({
         openid: data.openid,
         session_key: data.session_key

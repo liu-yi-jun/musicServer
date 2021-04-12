@@ -34,6 +34,7 @@ var tap = require('./routes/tap');
 let handleToken = require('./util/handleToken')
 let svg = require('./routes/svg')
 let security = require('./routes/security')
+
 let wx = require('./config/config').wx
 // 获取access_token
 let accessToken = require('./util/access_token')
@@ -69,8 +70,15 @@ app.use(cookieParser());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 后台部分
+var bc_usersRouter = require('./backRouters/bc_usersRouter');
+var bc_index = require('./backRouters/bc_index');
+app.use('/back/', bc_index)
+app.use('/back/user', bc_usersRouter);
+
 // 验证token
 app.use((req, res, next) => {
+  console.log(req.url)
   console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
   if (!req.url.includes(handleToken.whiteList)) {
     handleToken.verifyToken(req.headers.token).then(res => {

@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var db = require('../db/db');
+const subscribe = require('../util/subscribe');
 let util = require('../util/util')
 
 router.post('/squarePost', (req, res, next) => {
@@ -56,8 +57,21 @@ router.post('/squaredynamicsLike', (req, res, next) => {
   extra.theme = data.mainTable.name
   extra.themeId = relation.themeId
   extra.isNew = 1
+  extra.type = 0
   db.operateLSF(data, () => {
     if (extra.userId != extra.otherId) {
+      subscribe.sendSubscribeInfo({
+        otherId: extra.otherId,
+        template_id: subscribe.InfoId.like,
+        "data": {
+          "thing1": {
+            "value": util.cutstr(extra.themeTitle, 16)
+          },
+          "name2": {
+            "value": util.cutstr(extra.nickName, 16)
+          }
+        }
+      })
       return db.insert('notice', extra)
     }
   }, () => {
@@ -193,5 +207,24 @@ router.post('/squaredynamicsDelete', async (req, res, next) => {
     next(err)
   }
 })
+
+router.get('/getMysquareDynamics', async (req, res, next) => {
+  let { pageSize, pageIndex, userId } = req.query
+  try {
+    let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, { userId }, ['id DESC'])
+    let p1 = db.isLike(squaredynamics, 'squaredynamicslike', userId, 'squaredynamicsId', (element) => {
+      element.introduce = util.cutstr(element.introduce, 150)
+      element.pictureUrls = JSON.parse(element.pictureUrls)
+      element.releaseTime = util.getDateDiff(element.releaseTime)
+    })
+    let p2 = db.isStore(squaredynamics, 'squaredynamicsstore', userId, 'squaredynamicsId')
+    Promise.all([p1, p2]).then((result) => {
+      res.json(util.success(result[0]))
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 
 module.exports = router;

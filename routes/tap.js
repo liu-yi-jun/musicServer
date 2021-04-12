@@ -107,5 +107,16 @@ router.get('/myStoreAlliance', async (req, res, next) => {
 })
 
 
+router.post('/issueTap', async (req, res, next) => {
+  try {
+    let params = req.body
+    params.tapPicLink = JSON.stringify(params.tapPicLink)
+    params.releaseTime = Date.now() + ''
+    db.insert('tap', params).then(result => res.json(util.success(result))).catch(err => next(err))
+  } catch (err) {
+    next(err)
+  }
+})
+
 
 module.exports = router;
