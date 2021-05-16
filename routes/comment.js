@@ -13,8 +13,8 @@ router.post('/sendComment', async (req, res, next) => {
       theme: params.theme,
       themeId: params.themeId,
       commenterId: params.commenterId,
-      commenterAvatar: params.commenterAvatar,
-      commenterName: params.commenterName,
+      // commenterAvatar: params.commenterAvatar,
+      // commenterName: params.commenterName,
       commentContent: params.commentContent,
       releaseTime: params.releaseTime,
     })
@@ -26,8 +26,8 @@ router.post('/sendComment', async (req, res, next) => {
       db.insert('notice', {
         userId: params.commenterId,
         otherId: params.themeUserId,
-        nickName: params.commenterName,
-        avatarUrl: params.commenterAvatar,
+        // nickName: params.commenterName,
+        // avatarUrl: params.commenterAvatar,
         theme: params.theme,
         themeId: params.themeId,
         themeTitle: util.cutstr(params.themeTitle, 16),
@@ -64,17 +64,18 @@ router.post('/sendReply', async (req, res, next) => {
   try {
     let params = req.body
     params.releaseTime = Date.now()
-    let insertResult = db.insert('reply', {
+    let insertResult = await db.insert('reply', {
       commentId: params.commentId,
       parentReplyId: params.parentReplyId,
-      parentAvatar: params.parentAvatar,
-      parentName: params.parentName,
+      // parentAvatar: params.parentAvatar,
+      // parentName: params.parentName,
       replyPersonId: params.replyPersonId,
-      replyPersonAvatar: params.replyPersonAvatar,
-      replyPersonName: params.replyPersonName,
+      // replyPersonAvatar: params.replyPersonAvatar,
+      // replyPersonName: params.replyPersonName,
       replyContent: params.replyContent,
       releaseTime: params.releaseTime,
     })
+
     res.json(util.success(insertResult))
     // 消息
     if (params.noticeUserId !== params.replyPersonId) {
@@ -82,8 +83,8 @@ router.post('/sendReply', async (req, res, next) => {
       db.insert('notice', {
         userId: params.replyPersonId,
         otherId: params.noticeUserId,
-        nickName: params.replyPersonName,
-        avatarUrl: params.replyPersonAvatar,
+        // nickName: params.replyPersonName,
+        // avatarUrl: params.replyPersonAvatar,
         theme: params.theme,
         themeId: params.themeId,
         themeTitle: util.cutstr(params.themeTitle, 16),
@@ -112,6 +113,25 @@ router.post('/sendReply', async (req, res, next) => {
         }
       })
     }
+  } catch (err) {
+    next(err)
+  }
+})
+router.post('/deletecomment', async (req, res, next) => {
+  try {
+    let { id } = req.body
+    let result = await db.deleteData(`comment`, { 'id': id })
+    await db.deleteData(`reply`, { 'commentId': id })
+    res.json(util.success(result))
+  } catch (err) {
+    next(err)
+  }
+})
+router.post('/deletereply', async (req, res, next) => {
+  try {
+    let { id } = req.body
+    let result = await db.deleteData(`reply`, { 'id': id })
+    res.json(util.success(result))
   } catch (err) {
     next(err)
   }

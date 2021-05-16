@@ -58,7 +58,9 @@ router.get('/bandDetailAndCommont', async (req, res, next) => {
     let { pageSize, pageIndex, id, table, type, userId } = req.query
     // 如果type = detail 则返回详情和评论，否则返回评论
     if (type === 'detail') {
-      let details = await db.onlyQuery(table, 'id', id)
+      let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ${table} where id=${id})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id`
+      let details = await db.coreQuery(sql)
+      // let details = await db.onlyQuery(table, 'id', id)
       let bandlike = await db.multipleQuery('bandlike', { bandId: id, userId })
       let bandstore = await db.multipleQuery('bandstore', { bandId: id, userId })
       db.selfInOrDe('band', 'views', 'id', id, true)
@@ -104,6 +106,7 @@ router.post('/bandLike', (req, res, next) => {
   extra.themeId = relation.themeId
   extra.isNew = 1
   extra.type = 0
+  console.log(relation, 222222);
   db.operateLSF(data, () => {
     if (extra.userId != extra.otherId) {
       subscribe.sendSubscribeInfo({
@@ -114,7 +117,7 @@ router.post('/bandLike', (req, res, next) => {
             "value": util.cutstr(extra.themeTitle, 16)
           },
           "name2": {
-            "value": util.cutstr(extra.nickName, 16)
+            "value": util.cutstr(relation.nickName, 6)
           }
         }
       })
@@ -157,7 +160,7 @@ router.post('/bandStore', (req, res, next) => {
 router.get('/myStoreBand', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
-    let sql = `SELECT t2.id, t2.userId,t2.groupName,t2.existArr,t2.recruitArr,t2.introduce from (select * from bandstore where userId = ${userId})  AS t1 INNER JOIN band t2 ON t1.bandId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql = `SELECT t2.id, t2.userId,t2.title,t2.existArr,t2.recruitArr from (select * from bandstore where userId = ${userId})  AS t1 INNER JOIN band t2 ON t1.bandId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let bands = await db.coreQuery(sql)
     bands.forEach(item => {
       item.existArr = JSON.parse(item.existArr)

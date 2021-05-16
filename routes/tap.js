@@ -28,10 +28,12 @@ router.get('/getTapDetail', async (req, res, next) => {
   try {
     let { tapId, pageSize, pageIndex, userId } = req.query
     let tap = await db.onlyQuery('tap', 'id', tapId)
-
     tap[0].tapPicLink = JSON.parse(tap[0].tapPicLink)
-    let tapRecord = await db.paging('taprecord', pageSize, pageIndex, { tapId }, ['likes DESC'])
+    let sql = `SELECT t1.*,t2.avatarUrl from (select * from taprecord where tapId=${tapId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.likes DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let tapRecord = await db.coreQuery(sql)
+    // let tapRecord = await db.paging('taprecord', pageSize, pageIndex, { tapId }, ['likes DESC'])
     tapRecord = await db.isLike(tapRecord, 'taprecordlike', userId, 'taprecordId')
+
     res.json(util.success({
       tapDetail: tap[0],
       tapRecord: tapRecord
@@ -112,6 +114,7 @@ router.post('/issueTap', async (req, res, next) => {
     let params = req.body
     params.tapPicLink = JSON.stringify(params.tapPicLink)
     params.releaseTime = Date.now() + ''
+    params.views = '热度：0'
     db.insert('tap', params).then(result => res.json(util.success(result))).catch(err => next(err))
   } catch (err) {
     next(err)

@@ -15,7 +15,9 @@ router.post('/ticketIssue', (req, res, next) => {
 router.get('/searchTickets', async (req, res, next) => {
   try {
     let { title, pageSize, pageIndex, userId } = req.query
-    let tickets = await db.vague('ticket', 'title', title, pageSize, pageIndex, ['id DESC'])
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ticket  where title like '%${title}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let tickets = await db.coreQuery(sql)
+    // let tickets = await db.vague('ticket', 'title', title, pageSize, pageIndex, ['id DESC'])
     tickets = await db.isStore(tickets, 'ticketstore', userId, 'ticketId', (ticket) => {
       ticket.pictureUrls = JSON.parse(ticket.pictureUrls)
       ticket.additional = util.cutstr(ticket.additional, 50)
@@ -55,7 +57,8 @@ router.post('/followTicket', async (req, res, next) => {
 router.get('/myStoreTicket', async (req, res, next) => {
   try {
     let { pageSize, pageIndex, userId } = req.query
-    let sql = `SELECT t2.*  FROM (select * from ticketstore where userId = ${userId}) AS t1 INNER JOIN ticket t2 ON t1.ticketId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    // let sql = `SELECT t2.*  FROM (select * from ticketstore where userId = ${userId}) AS t1 INNER JOIN ticket t2 ON t1.ticketId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql = `SELECT t3.* ,t4.nickName,t4.avatarUrl from ( SELECT t2.*  FROM (select * from ticketstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN ticket t2 ON t1.ticketId = t2.id  ) AS t3 INNER JOIN users t4 ON t3.userId = t4.id  LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let ticket = await db.coreQuery(sql)
     ticket.forEach(item => {
       item.isStore = true
@@ -73,7 +76,9 @@ router.get('/ticketDetailAndCommont', async (req, res, next) => {
     let { pageSize, pageIndex, id, table, type, userId } = req.query
     // 如果type = detail 则返回详情和评论，否则返回评论
     if (type === 'detail') {
-      let details = await db.onlyQuery(table, 'id', id)
+      // let details = await db.onlyQuery(table, 'id', id)
+      let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ${table} where id=${id})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id`
+      let details = await db.coreQuery(sql)
       let ticketlike = await db.multipleQuery('ticketlike', { ticketId: id, userId })
       let ticketstore = await db.multipleQuery('ticketstore', { ticketId: id, userId })
       // details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
@@ -130,7 +135,7 @@ router.post('/ticketLike', (req, res, next) => {
             "value": util.cutstr(extra.themeTitle, 16)
           },
           "name2": {
-            "value": util.cutstr(extra.nickName, 16)
+            "value": util.cutstr(relation.nickName, 6)
           }
         }
       })

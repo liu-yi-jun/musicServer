@@ -15,8 +15,10 @@ router.post('/squarePost', (req, res, next) => {
 router.get('/getSquaredynamics', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from squaredynamics)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
 
-    let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, {}, ['id DESC'])
+    let squaredynamics = await db.coreQuery(sql)
+    // let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, {}, ['id DESC'])
     if (!squaredynamics.length) {
       return res.json(util.success([]))
     }
@@ -68,7 +70,7 @@ router.post('/squaredynamicsLike', (req, res, next) => {
             "value": util.cutstr(extra.themeTitle, 16)
           },
           "name2": {
-            "value": util.cutstr(extra.nickName, 16)
+            "value": util.cutstr(relation.nickName, 6)
           }
         }
       })
@@ -108,11 +110,16 @@ router.post('/squaredynamicsStore', (req, res, next) => {
 })
 
 router.get('/getDynamics', async (req, res, next) => {
-  let { pageSize, pageIndex, userId } = req.query
+  let { pageSize, pageIndex, userId, otherId } = req.query
   try {
-    let groupdynamics = await db.paging('groupdynamics', Math.ceil(pageSize / 2), pageIndex, { userId }, ['id DESC'])
-    let squaredynamics = await db.paging('squaredynamics', Math.ceil(pageSize / 2), pageIndex, { userId }, ['id DESC'])
-    let p1 = db.isLike(groupdynamics, 'groupdynamiclike', userId, 'groupDynamicId')
+    pageSize = Math.ceil(pageSize / 2)
+    // let groupdynamics = await db.paging('groupdynamics', Math.ceil(pageSize / 2), pageIndex, { userId }, ['id DESC'])
+
+    let sql1 = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from groupdynamics where userId=${otherId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql2 = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from squaredynamics where userId=${otherId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let groupdynamics = await db.coreQuery(sql1)
+    let squaredynamics = await db.coreQuery(sql2)
+    let p1 = db.isLike(groupdynamics, 'groupdynamiclike', parseInt(userId), 'groupDynamicId')
     let p2 = db.isStore(groupdynamics, 'groupdynamicstore', userId, 'groupDynamicId')
     let p3 = db.isLike(squaredynamics, 'squaredynamicslike', userId, 'squaredynamicsId')
     let p4 = db.isStore(squaredynamics, 'squaredynamicsstore', userId, 'squaredynamicsId')
@@ -138,8 +145,10 @@ router.get('/myStoreDynamic', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
     pageSize = Math.ceil(pageSize / 2)
-    let sql1 = `SELECT t2.*  FROM (select * from groupdynamicstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN groupdynamics t2 ON t1.groupDynamicId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
-    let sql2 = `SELECT t2.*  FROM (select * from squaredynamicsstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN squaredynamics t2 ON t1.squaredynamicsId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql1 = `SELECT t3.*,t4.nickName,t4.avatarUrl,t4.gender,t4.constellation,t4.age FROM (SELECT t2.*  FROM (select * from groupdynamicstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN groupdynamics t2 ON t1.groupDynamicId = t2.id) AS t3 INNER JOIN users t4 ON t3.userId = t4.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    // let sql1 = `SELECT t2.*  FROM (select * from groupdynamicstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN groupdynamics t2 ON t1.groupDynamicId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    // let sql2 = `SELECT t2.*  FROM (select * from squaredynamicsstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN squaredynamics t2 ON t1.squaredynamicsId = t2.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql2 = `SELECT t3.*,t4.nickName,t4.avatarUrl,t4.gender,t4.constellation,t4.age FROM (SELECT t2.*  FROM (select * from squaredynamicsstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN squaredynamics t2 ON t1.squaredynamicsId = t2.id) AS t3 INNER JOIN users t4 ON t3.userId = t4.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let groupdynamics = await db.coreQuery(sql1)
     let squaredynamics = await db.coreQuery(sql2)
     let p1 = db.isLike(groupdynamics, 'groupdynamiclike', userId, 'groupDynamicId')
@@ -177,8 +186,9 @@ router.get('/myStoreDynamic', async (req, res, next) => {
 router.get('/topicDynamic', async (req, res, next) => {
   let { pageSize, pageIndex, userId, topicId } = req.query
   try {
-
-    let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, { topicId }, ['id DESC'])
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from squaredynamics where topicId=${topicId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let squaredynamics = await db.coreQuery(sql)
+    // let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, { topicId }, ['id DESC'])
     if (!squaredynamics.length) {
       return res.json(util.success([]))
     }
@@ -211,7 +221,9 @@ router.post('/squaredynamicsDelete', async (req, res, next) => {
 router.get('/getMysquareDynamics', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
-    let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, { userId }, ['id DESC'])
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from squaredynamics where userId=${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let squaredynamics = await db.coreQuery(sql)
+    // let squaredynamics = await db.paging('squaredynamics', pageSize, pageIndex, { userId }, ['id DESC'])
     let p1 = db.isLike(squaredynamics, 'squaredynamicslike', userId, 'squaredynamicsId', (element) => {
       element.introduce = util.cutstr(element.introduce, 150)
       element.pictureUrls = JSON.parse(element.pictureUrls)

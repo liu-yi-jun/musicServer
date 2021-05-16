@@ -14,8 +14,8 @@ router.post('/addCourse', (req, res, next) => {
 
 router.get('/getCourses', (req, res, next) => {
   let { pageSize, pageIndex, groupId } = req.query
-  let some = ['id', 'groupId', 'groupName', 'userId', 'avatarUrl', 'nickName', 'posterUrl', 'courseName', 'views', 'store']
-  db.paging('groupcourse', pageSize, pageIndex, { groupId }, ['id DESC'], some).then(result => {
+  let sql = `SELECT t1.id, t1.groupId,t1.groupName,t1.userId,t1.courseName,t1.posterUrl,t1.views,t1.store,t2.avatarUrl,t2.nickName from (select * from groupcourse where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+  db.coreQuery(sql).then(result => {
     res.json(util.success(result))
   }).catch(err => next(err))
 })
@@ -24,7 +24,8 @@ router.get('/courseDetail', async (req, res, next) => {
   try {
     let id = req.query.id
     let userId = req.query.userId
-    let result = await db.onlyQuery('groupcourse', 'id', id)
+    let sql = `SELECT t1.*, t2.avatarUrl from (select * from groupcourse where id=${id})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id`
+    let result = await db.coreQuery(sql)
     db.selfInOrDe('groupcourse', 'views', 'id', id, true)
     result[0].releaseTime = util.handleDate(result[0].releaseTime)
     result[0].pictureUrls = JSON.parse(result[0].pictureUrls)
@@ -73,7 +74,7 @@ router.post('/groupcourseLike', (req, res, next) => {
             "value": util.cutstr(extra.themeTitle, 16)
           },
           "name2": {
-            "value": util.cutstr(extra.nickName, 16)
+            "value": util.cutstr(relation.nickName, 6)
           }
         }
       })
@@ -141,7 +142,8 @@ router.get('/myStoreCourse', async (req, res, next) => {
   try {
     let { pageSize, pageIndex, userId } = req.query
     try {
-      let sql = `SELECT t2.id, t2.groupId,t2.groupName,t2.userId,t2.avatarUrl,t2.nickName,t2.posterUrl ,t2.courseName, t2.views,t2.store from (select * from groupcoursestore where userId = ${userId})  AS t1 INNER JOIN groupcourse t2 ON t1.groupcourseId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+      let sql = `SELECT t3.id, t3.groupId,t3.groupName,t3.userId,t3.posterUrl ,t3.courseName, t3.views,t3.store,t4.nickName,t4.avatarUrl FROM (SELECT t2.* FROM (select * from groupcoursestore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN groupcourse t2 ON t1.groupcourseId = t2.id) AS t3 INNER JOIN users t4 ON t3.userId = t4.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+      // let sql = `SELECT t2.id, t2.groupId,t2.groupName,t2.userId,t2.avatarUrl,t2.nickName,t2.posterUrl ,t2.courseName, t2.views,t2.store from (select * from groupcoursestore where userId = ${userId})  AS t1 INNER JOIN groupcourse t2 ON t1.groupcourseId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
       let result = await db.coreQuery(sql)
       res.json(util.success(result))
     } catch (err) {

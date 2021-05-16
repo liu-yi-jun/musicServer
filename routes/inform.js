@@ -9,7 +9,9 @@ let handleToken = require('../util/handleToken')
 router.get('/getInform', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
-    let informs = await db.paging('notice', pageSize, pageIndex, { otherId: userId }, ['id DESC'])
+    // let informs = await db.paging('notice', pageSize, pageIndex, { otherId: userId }, ['id DESC'])
+    let sql = `SELECT t1.id ,t1.userId ,t1.otherId ,t1.theme ,t1.themeId ,t1.themeTitle ,t1.isNew ,t1.type ,t1.content ,t1.commentId,t1.replyId ,t2.nickName,t2.avatarUrl from (select * from notice where otherId=${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let informs = await db.coreQuery(sql)
     let p1 = isLike(informs, userId)
     let p2 = isStore(informs, userId)
     Promise.all([p1, p2]).then((result) => {
@@ -88,8 +90,10 @@ router.post('/sendSubscribeInfo', async (req, res, next) => {
   let access_token = await accessToken.getAccessToken()
   let url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${access_token}`
   let { userIdList, otherId, template_id, page = 'pages/home/home', data } = req.body
+  console.log(2222, data);
   if (!userIdList) {
     let onlyQueryResult = await db.onlyQuery('users', 'id', otherId, ['openid'])
+
     request.post({
       url,
       body: {

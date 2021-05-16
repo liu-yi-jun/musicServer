@@ -36,12 +36,29 @@ router.get('/getServerUserInfo', (req, res, next) => {
     handleToken.verifyToken(req.headers.token).then(async info => {
       let openid = info.openid
       let result = await queryUser(openid)
+
       return res.json(util.success(result))
     })
   } catch (err) {
     next(err)
   }
 })
+
+router.get('/simpleGetServerUserInfo', (req, res, next) => {
+  try {
+    handleToken.verifyToken(req.headers.token).then(async info => {
+      let openid = info.openid
+      let result = await queryUser(openid)
+      let myGrouList = await db.onlyQuery('manygroups', 'userId', result.userInfo.id)
+      result.myGrouList = myGrouList
+      return res.json(util.success(result))
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+
 
 
 /**
@@ -231,24 +248,25 @@ router.post('/signOutGroup', async (req, res, next) => {
   }
   try {
     await db.update('users', modifys, conditions)
-    let result = await db.selfInOrDe('groups', 'member', 'id', groupId, false)
-    res.json(util.success({ result, myGrouList }))
+    await db.selfInOrDe('groups', 'member', 'id', groupId, false)
+    res.json(util.success({ result: 'ok', myGrouList }))
   } catch (err) {
     next(err)
   }
 })
 
-router.post('/sendSingIn', async (req, res, next) => {
+router.get('/sendSingIn', async (req, res, next) => {
   try {
-    let id = req.body.userId
+    let id = req.query.userId
     // 查询用户是否签到过
     let queryResult = await db.onlyQuery('users', 'id', id, ['isSignIn'])
+    console.log(queryResult);
     let isSignIn = queryResult[0].isSignIn
-    if (!isSignIn) {
-      let selfInOrDe = await db.selfInOrDe('users', 'signInSum', 'id', id, true)
-      let update = await db.update('users', { isSignIn: 1 }, { id })
-    }
-    // 签到成功返回0,以签到的返回1
+    // if (!isSignIn) {
+    //   let selfInOrDe = await db.selfInOrDe('users', 'signInSum', 'id', id, true)
+    //   let update = await db.update('users', { isSignIn: 1 }, { id })
+    // }
+    // 以签到的返回1,为签到返回0
     res.json(util.success({ isSignIn }))
   } catch (err) {
     next(err)

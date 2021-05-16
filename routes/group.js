@@ -83,6 +83,11 @@ router.get('/getGroupInfo', async (req, res, next) => {
     if (visit) {
       db.selfInOrDe('groups', 'visitNumber', 'id', groupId, true)
     }
+    console.log(!onlyQuery[0]);
+    if (!onlyQuery[0]) {
+      res.json(util.success(null))
+      return
+    }
     onlyQuery[0].myGrouList = myGrouList
     multipleQuery.length ? onlyQuery[0].isFollow = true : onlyQuery[0].isFollow = false
     res.json(util.success(onlyQuery[0]))
@@ -169,7 +174,6 @@ router.post('/dissolutionGroup', async (req, res, next) => {
   if (myGrouList.length) {
     let nextGroup = myGrouList[myGrouList.length - 1]
     let groupNameObj = await db.onlyQuery('groups', 'id', nextGroup.groupId, ['groupName'])
-
     modifys = {
       groupName: groupNameObj[0].groupName,
       groupDuty: nextGroup.groupDuty,
@@ -187,6 +191,9 @@ router.post('/dissolutionGroup', async (req, res, next) => {
     id: userId
   }
   try {
+    await db.deleteData('manygroups', {
+      groupId
+    })
     await db.update('users', modifys, conditions)
     let deleteResult = await db.deleteData('groups', { id: groupId })
     res.json(util.success({ result: deleteResult, myGrouList }))
@@ -352,16 +359,54 @@ router.get('/getUnlimited', async (req, res, next) => {
   request.post({
     url,
     body: {
-      scene: `groupId=${groupId}`
+      scene: `groupId=${groupId}`,
+      "page": 'pages/home/welcome/welcome'
     },
     // request会自动编码成utf8，设置这个base64自动编码成base64
     encoding: 'base64',
     json: true
   }, (err, response, body) => {
+    console.log(body, 233333333);
     if (err) return next(err)
     res.json(util.success('data:image/jpeg;base64,' + body))
   })
 
+})
+router.get('/simpleGroupInfo', async (req, res, next) => {
+  try {
+    groupId = req.query.groupId
+    let groups = await db.onlyQuery('groups', 'id', groupId)
+    res.json(util.success(groups[0]))
+  } catch (err) {
+    next(err)
+  }
+})
+router.post('/simpleJoinGroup', async (req, res, next) => {
+  try {
+    let { groupName, userId, groupId } = req.body
+    let groupDuty = 2
+    let modifys = {
+      groupId,
+      groupDuty,
+      groupName,
+    }, conditions = {
+      id: userId
+    }
+    db.selfInOrDe('groups', 'member', 'id', groupId, true)
+    let manygroupsInsertData = {
+      groupId,
+      userId,
+      groupDuty,
+      time: Date.now()
+    }
+    await db.update('users', modifys, conditions)
+    // let result = await db.onlyQuery('users', 'id', userId)
+    await db.insert('manygroups', manygroupsInsertData)
+    // let myGrouList = await db.onlyQuery('manygroups', 'userId', userId)
+    res.json(util.success('ok'))
+  } catch (err) {
+    next(err)
+  }
 })
 
 module.exports = router;

@@ -5,6 +5,7 @@ module.exports = {
     host: 'www.shengruo.top',
     // host: 'localhost',
     user: 'root',
+    // password: 'QFJP46zm',
     password: 'root',
     database: 'music',
     port: 3306
@@ -19,15 +20,15 @@ module.exports = {
 
   },
   resource: {
-    // baseUrl: "http://localhost:3000"
-    baseUrl: "http://192.168.31.40:3000"
+    baseUrl: "http://localhost:3000"
+    // baseUrl: "http://192.168.31.40:3000"
     // baseUrl: "http://192.168.0.145:3000"
     // baseUrl: 'https://www.shengruo.top'
     // baseUrl:"https://eigene.cn"
     // baseUrl:"http://eigene.free.idcfengye.com"
   },
   InfoId: {
-    like: 'b_JFxHhkQlp9nvVXyH2EEzlO2meF71EY0RJFTXCmpUQ',
+    like: 'b_JFxHhkQlp9nvVXyH2EE02YIH2U6kUj71UqsspyFM8',
     content: 'gSZolmS3oikRODqlJy0LGyrWtJgRZv2wV05CZBmW8ko',
     reply: 'OhXH6fGsvmuAQGzrTBZYnggUlasZfqBjd0xzFvgZtjI',
     band: 'm1ULncMbn3rDVirXA_2-EoLHtmRWSsVc3Fg8NlCWW_s',

@@ -15,8 +15,11 @@ router.post('/postAlliance', (req, res, next) => {
 router.get('/getAlliance', async (req, res, next) => {
   let { pageSize, pageIndex } = req.query
   try {
-    let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
-    let alliances = await db.paging('alliance', pageSize, pageIndex, {}, ['id DESC'], some)
+    // let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
+    // let alliances = await db.paging('alliance', pageSize, pageIndex, {}, ['id DESC'], some)
+    let sql = `SELECT t1.id, t1.userId,t1.title,t1.pictureUrls,t1.groupId,t1.activityTime,t1.organization,t1.groupName,t2.nickName,t2.avatarUrl from (select * from alliance)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let alliances = await db.coreQuery(sql)
+
     if (!alliances.length) {
       return res.json(util.success([]))
     }
@@ -32,8 +35,11 @@ router.get('/getAlliance', async (req, res, next) => {
 router.get('/personalAlliance', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
-    let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
-    let alliances = await db.paging('alliance', pageSize, pageIndex, { userId }, ['id DESC'], some)
+    // let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
+    // let alliances = await db.paging('alliance', pageSize, pageIndex, { userId }, ['id DESC'], some)
+
+    let sql = `SELECT t1.id,t1.userId,t1.title,t1.pictureUrls,t1.groupId,t1.activityTime,t1.organization,t1.groupName, t2.nickName,t2.avatarUrl from (select * from alliance where userId=${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let alliances = await db.coreQuery(sql)
     // if (!alliances.length) {
     //     return res.json(util.success([]))
     // }
@@ -107,7 +113,7 @@ router.post('/allianceLike', (req, res, next) => {
             "value": util.cutstr(extra.themeTitle, 16)
           },
           "name2": {
-            "value": util.cutstr(extra.nickName, 16)
+            "value": util.cutstr(relation.nickName, 6)
           }
         }
       })
@@ -162,7 +168,8 @@ router.post('/allianceDelete', async (req, res, next) => {
 router.get('/myStoreAlliance', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
-    let sql = `SELECT t2.id, t2.userId,t2.title,t2.pictureUrls,t2.groupId,t2.activityTime,t2.organization ,t2.groupName, t2.nickName,t2.avatarUrl from (select * from alliancestore where userId = ${userId})  AS t1 INNER JOIN alliance t2 ON t1.allianceId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql = `SELECT t3.id, t3.userId,t3.title,t3.pictureUrls,t3.groupId,t3.activityTime,t3.organization ,t3.groupName,t4.nickName,t4.avatarUrl FROM (SELECT t2.* FROM (select * from alliancestore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN alliance t2 ON t1.allianceId = t2.id) AS t3 INNER JOIN users t4 ON t3.userId = t4.id LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    // let sql = `SELECT t2.id, t2.userId,t2.title,t2.pictureUrls,t2.groupId,t2.activityTime,t2.organization ,t2.groupName, t2.nickName,t2.avatarUrl from (select * from alliancestore where userId = ${userId})  AS t1 INNER JOIN alliance t2 ON t1.allianceId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let alliances = await db.coreQuery(sql)
     alliances.forEach(item => {
       item.pictureUrls = JSON.parse(item.pictureUrls)

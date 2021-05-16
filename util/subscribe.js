@@ -8,6 +8,7 @@ module.exports = {
       let access_token = await accessToken.getAccessToken()
       let url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${access_token}`
       let onlyQueryResult = await db.onlyQuery('users', 'id', otherId, ['openid'])
+      console.log(2222, data);
       request.post({
         url,
         body: {

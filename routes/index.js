@@ -1,4 +1,5 @@
 
+const e = require('express');
 var express = require('express');
 var router = express.Router();
 var db = require('../db/db');
@@ -76,5 +77,86 @@ router.post('/report', async (req, res, next) => {
     next(err)
   }
 })
+
+router.get('/signInInfo', async (req, res, next) => {
+  try {
+    let userId = req.query.userId
+    let result = await db.onlyQuery('signin', 'userId', userId)
+    console.log(result);
+    if (!result[0]) {
+      db.insert('signin', { userId, continuity: 0, everyday: 1 })
+      result[0] = { userId, continuity: 0, everyday: 1 }
+    }
+    res.json(util.success(result[0]))
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/closeEveryday', async (req, res, next) => {
+  let userId = req.body.userId
+  try {
+    let result = await db.update('signin', { everyday: 0 }, { userId })
+    res.json(util.success(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
+
+router.post('/signInPost', async (req, res, next) => {
+  let userId = req.body.userId
+  try {
+    let result = await db.onlyQuery('signin', 'userId', userId)
+    let queryResult = await db.onlyQuery('users', 'id', userId, ['isSignIn',''])
+    let isSignIn = queryResult[0].isSignIn
+    let signInInfo = result[0]
+    if (isSignIn) {
+      return res.json(util.success(result[0]))
+    }
+    let showSeven = false
+    let nowTime = new Date(util.format(new Date().getTime())).getTime()
+    if (signInInfo.lastTime) {
+      // 后面签到
+      console.log(nowTime, signInInfo.lastTime, nowTime - signInInfo.lastTime);
+      if (nowTime - signInInfo.lastTime > 24 * 3600 * 1000) {
+        console.log('归零');
+        // 归零
+        signInInfo.situation = JSON.parse(signInInfo.situation)
+        if (!signInInfo.situation) {
+          let situation = [signInInfo.continuity]
+          signInInfo.situation = JSON.stringify(situation)
+        } else {
+          signInInfo.situation.push(signInInfo.continuity)
+          signInInfo.situation = JSON.stringify(signInInfo.situation)
+        }
+        signInInfo.continuity = 1
+      } else {
+        console.log('加1');
+        // 加1 
+        signInInfo.continuity++
+        if (signInInfo.continuity === 7 && signInInfo.seven === 0) {
+          showSeven = true
+          signInInfo.seven = 1
+        }
+      }
+    } else {
+      // 第一次签到
+      signInInfo.continuity++
+    }
+    db.selfInOrDe('users', 'signInSum', 'id', userId, true)
+    db.update('users', { isSignIn: 1 }, { id: userId })
+    signInInfo.lastTime = nowTime
+    await db.update('signin', signInInfo, { userId })
+    result = await db.onlyQuery('signin', 'userId', userId)
+    result[0].showSeven = showSeven
+    result[0].signInSum = queryResult[0].signInSum + 1
+    res.json(util.success(result[0]))
+  } catch (err) {
+    next(err)
+  }
+})
+
+
 
 module.exports = router;

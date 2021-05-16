@@ -1,6 +1,7 @@
 
 let wx = require('../config/config').wx
 let request = require('request');
+var db = require('../db/db');
 
 let access_token = 0
 let createtime = 0
@@ -22,6 +23,7 @@ const updateAccessToken = async () => {
   const res = JSON.parse(resStr)
   if (res.access_token) {
     console.log('写入', res.access_token);
+    db.update('access', { access_token: res.access_token }, { id: 1 })
     //写入
     access_token = res.access_token
     createtime = new Date().getTime()
@@ -32,30 +34,14 @@ const updateAccessToken = async () => {
 }
 
 const getAccessToken = () => {
-  console.log('获取', access_token);
-  return access_token
-  // return new Promise(async (resolve, reject) => {
-  //   return resolve(access_token)
-  // })
-  // return new Promise(async (resolve, reject) => {
-  //   try {
-  //     if (access_token) {
-  //       const nowTime = new Date().getTime()
-  //       if ((nowTime - createtime) / 1000 / 60 / 60 >= 2) {
-  //         await updateAccessToken()
-  //         return resolve(access_token)
-  //       } else {
-  //         return resolve(access_token)
-  //       }
-  //     } else {
-  //       await updateAccessToken()
-  //       return resolve(access_token)
-  //     }
 
-  //   } catch (error) {
-  //     reject(error)
-  //   }
-  // })
+  let sql = `select access_token from access where id = 1`
+  return new Promise(async (resolve, reject) => {
+    db.coreQuery(sql).then((result) => {
+      console.log('获取', result[0].access_token);
+      return resolve(result[0].access_token)
+    })
+  })
 }
 const start = () => {
   updateAccessToken().then(() => {

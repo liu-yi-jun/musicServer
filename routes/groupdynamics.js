@@ -33,8 +33,10 @@ router.get('/groupPagingGetGroupdynamics', async (req, res, next) => {
     if (some) {
       some = JSON.parse(some)
     }
-    some = ['id', 'userId', 'avatarUrl', 'nickName', 'mold', 'releaseTime', 'voiceUrl', 'videoUrl', 'pictureUrls', 'introduce', 'likes', 'comment']
-    let groupdynamics = await db.paging('groupdynamics', pageSize, pageIndex, { groupId }, ['id DESC'], some)
+    let sql = `SELECT t1.id,t1.userId,t1.mold,t1.releaseTime,t1.voiceUrl,t1.videoUrl,t1.pictureUrls,t1.introduce,t1.likes,t1.comment,t2.nickName,t2.avatarUrl from (select * from groupdynamics where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let groupdynamics = await db.coreQuery(sql)
+    // some = ['id', 'userId', 'avatarUrl', 'nickName', 'mold', 'releaseTime', 'voiceUrl', 'videoUrl', 'pictureUrls', 'introduce', 'likes', 'comment']
+    // let groupdynamics = await db.paging('groupdynamics', pageSize, pageIndex, { groupId }, ['id DESC'], some)
     if (!groupdynamics.length) {
       return res.json(util.success([]))
     }
@@ -56,7 +58,9 @@ router.get('/dynamicDetailAndCommont', async (req, res, next) => {
     let { pageSize, pageIndex, id, table, type } = req.query
     // 如果type = detail 则返回详情和评论，否则返回评论
     if (type === 'detail') {
-      let details = await db.onlyQuery(table, 'id', id)
+      // let details = await db.onlyQuery(table, 'id', id)
+      let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ${table} where id=${id})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id`
+      let details = await db.coreQuery(sql)
       details[0].releaseTime = util.getDateDiff(details[0].releaseTime)
       details[0].pictureUrls = JSON.parse(details[0].pictureUrls)
 
@@ -109,7 +113,7 @@ router.post('/groupdynamicsLike', (req, res, next) => {
             "value": util.cutstr(extra.themeTitle, 16)
           },
           "name2": {
-            "value": util.cutstr(extra.nickName, 16)
+            "value": util.cutstr(relation.nickName, 6)
           }
         }
       })
@@ -167,7 +171,9 @@ router.post('/groupdynamicsDelete', async (req, res, next) => {
 router.get('/getMygroupdDynamics', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
   try {
-    let groupdynamics = await db.paging('groupdynamics', Math.ceil(pageSize / 2), pageIndex, { userId }, ['id DESC'])
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from groupdynamics where userId=${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let groupdynamics = await db.coreQuery(sql)
+    // let groupdynamics = await db.paging('groupdynamics', Math.ceil(pageSize / 2), pageIndex, { userId }, ['id DESC'])
     let p1 = db.isLike(groupdynamics, 'groupdynamiclike', userId, 'groupDynamicId', (element) => {
       element.pictureUrls = JSON.parse(element.pictureUrls)
       element.introduce = util.cutstr(element.introduce, 20)

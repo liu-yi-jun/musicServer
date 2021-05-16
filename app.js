@@ -34,6 +34,7 @@ var tap = require('./routes/tap');
 let handleToken = require('./util/handleToken')
 let svg = require('./routes/svg')
 let security = require('./routes/security')
+let bandMoment = require('./routes/bandMoment')
 
 let wx = require('./config/config').wx
 // 获取access_token
@@ -46,10 +47,13 @@ const scheduleCronstyle = () => {
   //每天的0点定时执行一次:
   schedule.scheduleJob('0 0 0 * * *', () => {
     console.log('scheduleCronstyle:' + new Date());
-    let sql = "UPDATE users SET isSignIn=0 where id < 100000"
-    db.coreQuery(sql)
+    let sql1 = "UPDATE users SET isSignIn=0 where id < 100000"
+    db.coreQuery(sql1)
+    let sql2 = "UPDATE signin SET everyday=1  where id < 100000"
+    db.coreQuery(sql2)
   });
 }
+
 scheduleCronstyle();
 
 var app = express();
@@ -78,9 +82,11 @@ app.use('/back/user', bc_usersRouter);
 
 // 验证token
 app.use((req, res, next) => {
-  console.log(req.url)
+  console.log(req.urlm, 1111111)
   console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
-  if (!req.url.includes(handleToken.whiteList)) {
+  if (req.url.includes(handleToken.whiteList) || req.url.includes('/api/group/simpleGroupInfo')) {
+    next()
+  } else {
     handleToken.verifyToken(req.headers.token).then(res => {
       next()
     }).catch(e => {
@@ -89,8 +95,6 @@ app.use((req, res, next) => {
         message: 'invalid token'
       })
     })
-  } else {
-    next()
   }
 })
 
@@ -116,6 +120,7 @@ app.use('/api/system', system);
 app.use('/api/performance', performance);
 app.use('/api/tap', tap);
 app.use('/api/svg', svg);
+app.use('/api/bandMoment', bandMoment);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
