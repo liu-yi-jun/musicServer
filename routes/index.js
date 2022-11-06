@@ -4,9 +4,62 @@ var express = require('express');
 var router = express.Router();
 var db = require('../db/db');
 let util = require('../util/util')
+const subscribe = require('../util/subscribe');
+let my_crypto = require('../util/my_crypto')
+let accessToken = require('../util/access_token')
+let request = require('request');
+
+const schedule = require('node-schedule');
+// (async function () {
+//   //每晚上点定时执行一次:
+//   schedule.scheduleJob('0 0 20 * * *', async () => {
+//     let access_token = await accessToken.getAccessToken()
+//     let url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${access_token}`
+//     // let onlyQueryResult = await db.onlyQuery('users', 'isSignIn', 0, ['openid'])
+//     let sql = 'select openid from users where isSignIn = 0'
+//     let onlyQueryResult = await db.coreQuery(sql)
+//     onlyQueryResult.forEach(item => {
+//       item.openid = my_crypto.aesDecrypt(item.openid)
+//       request.post({
+//         url,
+//         body: {
+//           touser: item.openid,
+//           template_id: subscribe.InfoId.signIn,
+//           "page": 'pages/square/square',
+//           "data": {
+//             "thing1": {
+//               "value": '连续签到7天获赠精美周边',
+//             },
+//             "thing2": {
+//               "value": '累计打卡30天更有音乐键盘、尤克里里赠送',
+//             }
+//           },
+//           "miniprogramState": 'formal'
+//         },
+//         json: true
+//       }, (err, response, body) => {
+//         console.log(err);
+//         console.log(body);
+//       })
+//     })
+//   });
+// })()
 
 router.post('/share', (req, res, next) => {
-  let { table, id } = req.body
+  let { table, id, otherId, themeTitle } = req.body
+  // subscribe.sendSubscribeInfo({
+  //   otherId,
+  //   template_id: subscribe.InfoId.forward,
+  //   page:'pages/home/home',
+  //   "data": {
+  //     "thing1": {
+  //       "value": util.cutstr(themeTitle, 16)
+  //     },
+  //     "time2": {
+  //       "value": util.format(Date.now())
+  //     }
+  //   }
+  // })
   db.selfInOrDe(table, 'share', 'id', id, true).then(result => res.json(util.success(result))).catch(err => next(err))
 })
 router.get('/allTopic', (req, res, next) => {
@@ -108,7 +161,7 @@ router.post('/signInPost', async (req, res, next) => {
   let userId = req.body.userId
   try {
     let result = await db.onlyQuery('signin', 'userId', userId)
-    let queryResult = await db.onlyQuery('users', 'id', userId, ['isSignIn',''])
+    let queryResult = await db.onlyQuery('users', 'id', userId, ['isSignIn', 'signInSum'])
     let isSignIn = queryResult[0].isSignIn
     let signInInfo = result[0]
     if (isSignIn) {
@@ -156,6 +209,108 @@ router.post('/signInPost', async (req, res, next) => {
     next(err)
   }
 })
+
+
+router.post('/codeCheck', async (req, res, next) => {
+  let code = req.body.code
+  try {
+    if (code.length === 6) {
+      let flag = false
+      let code_index = 0
+      global.codes.forEach((item, index) => {
+        if (item === code) {
+          code_index = index
+          flag = true
+          return
+        }
+      })
+      if (flag) {
+        global.codes.splice(code_index, 1, 0)
+        return res.json(util.success(1))
+      } else {
+        return res.json(util.success(0))
+      }
+    } else if (code.length === 8) {
+      let result = await db.onlyQuery('invitation', 'code', code)
+      if (result.length) {
+        return res.json(util.success(1))
+      } else {
+        return res.json(util.success(0))
+      }
+    } else {
+      return res.json(util.success(0))
+    }
+
+  } catch (err) {
+    next(err)
+  }
+})
+
+
+router.post('/sendSystemMsg', async (req, res, next) => {
+  let { messageId, msgContent, userId } = req.body
+  try {
+    msgContent = JSON.stringify(msgContent)
+    result = await db.insert('newsystem', { messageId, msgContent, userId })
+    return res.json(util.success(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/deleteSystemMsg', async (req, res, next) => {
+  let { messageId, userId } = req.body
+  try {
+    result = await db.deleteData('newsystem', { messageId, userId })
+    return res.json(util.success(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/getSystemMsg', async (req, res, next) => {
+  let userId = req.query.userId
+  try {
+    let sql = `select * from newsystem where userId = ${userId} ORDER BY id DESC`
+    let result = await db.coreQuery(sql)
+    let msgList = []
+    result.forEach(item => {
+      item.msgContent = JSON.parse(item.msgContent)
+      item.msgContent.message.jsonDate.isNew = 0
+      msgList.push(item.msgContent)
+    })
+    return res.json(util.success(msgList))
+  } catch (err) {
+    next(err)
+  }
+})
+
+
+
+router.post('/sendFinalSystemMsg', async (req, res, next) => {
+  let { from, to, message } = req.body
+  try {
+    to.userIdList.forEach(async item => {
+      let insertDate = {
+        userId: from.userId,
+        otherId: item.userId,
+        type: message.type,
+        groupId: message.jsonDate.groupId,
+        status: message.jsonDate.status,
+        jsonDate: JSON.stringify(message.jsonDate),
+        msgId: message.id,
+        isNew: 1
+      }
+      await db.insert('finalsystem', insertDate)
+    })
+    return res.json(util.success('ok'))
+  } catch (err) {
+    next(err)
+  }
+})
+
+
+
 
 
 

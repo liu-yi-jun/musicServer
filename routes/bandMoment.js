@@ -12,8 +12,13 @@ router.post('/issueMoment', (req, res, next) => {
 
 router.get('/getMoment', async (req, res, next) => {
   try {
-    let { pageSize, pageIndex, userId } = req.query
-    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from bandmoment)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let { pageSize, pageIndex, userId,minID } = req.query
+    let sql
+    if (minID == 0) {
+      sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from bandmoment)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    } else {
+      sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from bandmoment)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize}`
+    }
     let moments = await db.coreQuery(sql)
     moments = await db.isStore(moments, 'bandmomentstore', userId, 'momentId', (moment) => {
       moment.releaseTime = util.getDateDiff(moment.releaseTime)
@@ -140,5 +145,38 @@ router.post('/bandmomentDelete', async (req, res, next) => {
     next(err)
   }
 })
+
+
+router.get('/mybandmoment', async (req, res, next) => {
+  try {
+    let { pageSize, pageIndex, userId } = req.query
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from bandmoment  where userId = ${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let moments = await db.coreQuery(sql)
+    moments = await db.isStore(moments, 'bandmomentstore', userId, 'momentId', (moment) => {
+      moment.releaseTime = util.getDateDiff(moment.releaseTime)
+      moment.introduce = util.cutstr(moment.introduce, 50)
+    })
+    return res.json(util.success(moments))
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/myStoreMoment', async (req, res, next) => {
+  try {
+    let { pageSize, pageIndex, userId } = req.query
+    let sql = `SELECT t3.* ,t4.nickName,t4.avatarUrl from ( SELECT t2.*  FROM (select * from bandmomentstore where userId = ${userId} ORDER BY id DESC) AS t1 INNER JOIN bandmoment t2 ON t1.momentId = t2.id  ) AS t3 INNER JOIN users t4 ON t3.userId = t4.id  LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let moment = await db.coreQuery(sql)
+    moment.forEach(item => {
+      item.isStore = true
+      item.releaseTime = util.getDateDiff(moment.releaseTime)
+      item.introduce = util.cutstr(moment.introduce, 50)
+    })
+    return res.json(util.success(moment))
+  } catch (err) {
+    next(err)
+  }
+})
+
 
 module.exports = router;

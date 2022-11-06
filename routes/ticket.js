@@ -14,8 +14,14 @@ router.post('/ticketIssue', (req, res, next) => {
 
 router.get('/searchTickets', async (req, res, next) => {
   try {
-    let { title, pageSize, pageIndex, userId } = req.query
-    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ticket  where title like '%${title}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let { title, pageSize, pageIndex, userId,minID } = req.query
+    let sql
+    if(minID == 0) {
+      sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ticket  where title like '%${title}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    }else {
+      sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ticket  where title like '%${title}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize}`
+    }
+   
     let tickets = await db.coreQuery(sql)
     // let tickets = await db.vague('ticket', 'title', title, pageSize, pageIndex, ['id DESC'])
     tickets = await db.isStore(tickets, 'ticketstore', userId, 'ticketId', (ticket) => {
@@ -189,14 +195,13 @@ router.post('/ticketDelete', async (req, res, next) => {
 router.get('/myTicket', async (req, res, next) => {
   try {
     let { pageSize, pageIndex, userId } = req.query
-    let sql = `SELECT *  FROM  ticket where userId = ${userId}  ORDER BY id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
-    let ticket = await db.coreQuery(sql)
-    ticket.forEach(item => {
-      item.isStore = true
-      item.pictureUrls = JSON.parse(item.pictureUrls)
-      item.additional = util.cutstr(item.additional, 50)
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from ticket  where userId = ${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let tickets = await db.coreQuery(sql)
+    tickets = await db.isStore(tickets, 'ticketstore', userId, 'ticketId', (ticket) => {
+      ticket.pictureUrls = JSON.parse(ticket.pictureUrls)
+      ticket.additional = util.cutstr(ticket.additional, 50)
     })
-    return res.json(util.success(ticket))
+    return res.json(util.success(tickets))
   } catch (err) {
     next(err)
   }

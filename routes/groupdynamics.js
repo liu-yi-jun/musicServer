@@ -5,6 +5,7 @@ var db = require('../db/db');
 let util = require('../util/util')
 const subscribe = require('../util/subscribe')
 
+
 router.post('/pictureIssue', (req, res, next) => {
   console.log(req.body)
   let params = req.body
@@ -28,12 +29,18 @@ router.post('/voiceIssue', (req, res, next) => {
   db.insert('groupdynamics', params).then(result => res.json(util.success(result))).catch(err => next(err))
 })
 router.get('/groupPagingGetGroupdynamics', async (req, res, next) => {
-  let { pageSize, pageIndex, groupId, userId, some } = req.query
+  let { pageSize, pageIndex, groupId, userId, minID, some } = req.query
   try {
     if (some) {
       some = JSON.parse(some)
     }
-    let sql = `SELECT t1.id,t1.userId,t1.mold,t1.releaseTime,t1.voiceUrl,t1.videoUrl,t1.pictureUrls,t1.introduce,t1.likes,t1.comment,t2.nickName,t2.avatarUrl from (select * from groupdynamics where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql
+    if (minID == 0) {
+      sql = `SELECT t1.id,t1.userId,t1.mold,t1.releaseTime,t1.voiceUrl,t1.videoUrl,t1.pictureUrls,t1.introduce,t1.likes,t1.comment,t2.nickName,t2.avatarUrl from (select * from groupdynamics where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    } else {
+      sql = `SELECT t1.id,t1.userId,t1.mold,t1.releaseTime,t1.voiceUrl,t1.videoUrl,t1.pictureUrls,t1.introduce,t1.likes,t1.comment,t2.nickName,t2.avatarUrl from (select * from groupdynamics where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize}`
+    }
+
     let groupdynamics = await db.coreQuery(sql)
     // some = ['id', 'userId', 'avatarUrl', 'nickName', 'mold', 'releaseTime', 'voiceUrl', 'videoUrl', 'pictureUrls', 'introduce', 'likes', 'comment']
     // let groupdynamics = await db.paging('groupdynamics', pageSize, pageIndex, { groupId }, ['id DESC'], some)
@@ -42,6 +49,7 @@ router.get('/groupPagingGetGroupdynamics', async (req, res, next) => {
     }
     let p1 = db.isLike(groupdynamics, 'groupdynamiclike', userId, 'groupDynamicId', (element) => {
       element.pictureUrls = JSON.parse(element.pictureUrls)
+
       element.introduce = util.cutstr(element.introduce, 20)
       element.releaseTime = util.getDateDiff(element.releaseTime)
     })
@@ -79,7 +87,7 @@ router.get('/dynamicDetailAndCommont', async (req, res, next) => {
     next(err)
   }
 })
-router.post('/groupdynamicsLike', (req, res, next) => {
+router.post('/groupdynamicsLike', async (req, res, next) => {
   let relation = req.body.relation
   let operate = req.body.operate
   let extra = req.body.extra
@@ -92,12 +100,14 @@ router.post('/groupdynamicsLike', (req, res, next) => {
     viceTable: {
       name: 'groupdynamiclike',
       relation: {
-        userId: relation.userId,
+        userId: relation.userId, 
         groupDynamicId: relation.themeId
       }
     },
     operate
   }
+  let dynamic = await db.onlyQuery(data.mainTable.name, 'id', relation.themeId)
+  if (!dynamic.length) return res.json(util.success(0))
   extra.userId = relation.userId
   extra.theme = data.mainTable.name
   extra.themeId = relation.themeId
@@ -157,10 +167,15 @@ router.post('/groupdynamicsStore', (req, res, next) => {
 router.post('/groupdynamicsDelete', async (req, res, next) => {
   try {
     const { id, groupId, tableName } = req.body
+    let dynamic = await db.onlyQuery(tableName, 'id', id)
+    if (!dynamic.length) return res.json(util.success({ affectedRows: 1 }))
     let result = await db.deleteData(tableName, { id })
     await db.deleteData(`groupdynamiclike`, { 'groupDynamicId': id })
     await db.deleteData(`groupdynamicstore`, { 'groupDynamicId': id })
     await db.deleteData('comment', { theme: tableName, themeId: id })
+    util.deleteFiles(JSON.parse(dynamic[0].pictureUrls))
+    if(dynamic[0].videoUrl) util.deleteFile(dynamic[0].videoUrl)
+    if(dynamic[0].voiceUrl) util.deleteFile(dynamic[0].voiceUrl)
     db.selfInOrDe('groups', 'postNumber', 'id', groupId, false)
     res.send(util.success(result))
   } catch (err) {
@@ -169,9 +184,15 @@ router.post('/groupdynamicsDelete', async (req, res, next) => {
 })
 
 router.get('/getMygroupdDynamics', async (req, res, next) => {
-  let { pageSize, pageIndex, userId } = req.query
+  let { pageSize, pageIndex, userId, minID } = req.query
   try {
-    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl,t2.gender,t2.constellation,t2.age from (select * from groupdynamics where userId=${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql
+    if (minID == 0) {
+      sql = `SELECT t3.* ,t4.nickName,t4.avatarUrl,t4.gender,t4.constellation,t4.age from (select t1.*,t2.groupName  from groupdynamics  AS t1 LEFT JOIN  groups t2 ON t1.groupId = t2.id where t1.userId=${userId})  AS t3 INNER JOIN users t4 ON t3.userId = t4.id ORDER BY t3.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    } else {
+      sql = `SELECT t3.* ,t4.nickName,t4.avatarUrl,t4.gender,t4.constellation,t4.age from (select t1.*,t2.groupName  from groupdynamics  AS t1 LEFT JOIN  groups t2 ON t1.groupId = t2.id where t1.userId=${userId})  AS t1 INNER JOIN users t4 ON t3.userId = t4.id  where t3.id < ${minID}  ORDER BY t3.id DESC LIMIT ${pageSize}`
+    }
+
     let groupdynamics = await db.coreQuery(sql)
     // let groupdynamics = await db.paging('groupdynamics', Math.ceil(pageSize / 2), pageIndex, { userId }, ['id DESC'])
     let p1 = db.isLike(groupdynamics, 'groupdynamiclike', userId, 'groupDynamicId', (element) => {

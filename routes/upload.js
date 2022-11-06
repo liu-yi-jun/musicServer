@@ -7,6 +7,8 @@ var fs = require("fs");
 var baseUrl = require('../config/config').resource.baseUrl;
 let accessToken = require('../util/access_token')
 let request = require('request');
+let cp = require('child_process');
+var path = require('path')
 
 // destination 如果是一个函数，则下面的路径必须是已经存在的路径，否则汇报错误：路径不存在
 let storage = multer.diskStorage({
@@ -37,11 +39,12 @@ let upload = multer({
 router.post('/uploadImg', upload.single('file'), async (req, res, next) => {
   let { userId = 'unknown', module = 'unknown', type = 'unknown' } = req.body
   var url = `${baseUrl}/${type}/ID00${userId}/${module}/` + req.file.filename
-  let form = {
-    media: fs.createReadStream(__dirname + `/../public/${type}/ID00${userId}/${module}/${req.file.filename}`)
-  }
+
   let access_token = await accessToken.getAccessToken()
   if (type === 'image') {
+    let form = {
+      media: fs.createReadStream(__dirname + `/../public/${type}/ID00${userId}/${module}/${req.file.filename}`)
+    }
     let reqUrl = `https://api.weixin.qq.com/wxa/img_sec_check?access_token=${access_token}`
     request.post({ url: reqUrl, formData: form }, (err, response, body) => {
       body = JSON.parse(body)
@@ -69,7 +72,15 @@ router.post('/uploadImg', upload.single('file'), async (req, res, next) => {
         res.json(util.success(url))
       }
     })
-  } else {
+  } else if (type === 'video'){
+    const execJpg = (pathFile , saveFilePath)=>{
+      cp.exec(`ffmpeg -i ${path.join(__dirname, pathFile)} -y -f image2 -frames 1 ${path.join(__dirname, saveFilePath)}`, function(res) {
+      }) 
+    } 
+    let fileName = req.file.filename.split('.')[0]
+    execJpg( `/../public/${type}/ID00${userId}/${module}/${req.file.filename}`, `/../public/${type}/ID00${userId}/${module}/${fileName}.jpg`)
+    res.json(util.success(url))
+  }else {
     res.json(util.success(url))
   }
 

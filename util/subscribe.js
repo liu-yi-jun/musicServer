@@ -2,13 +2,14 @@ let request = require('request');
 let accessToken = require('./access_token')
 const InfoId = require('../config/config').InfoId;
 const db = require('../db/db');
+let my_crypto = require('../util/my_crypto')
 module.exports = {
-  sendSubscribeInfo ({ otherId, template_id, data, page = 'pages/home/home' }) {
+  sendSubscribeInfo ({ otherId, template_id, data, page = 'pages/my/information/information' }) {
     return new Promise(async (reslove, reject) => {
       let access_token = await accessToken.getAccessToken()
       let url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${access_token}`
       let onlyQueryResult = await db.onlyQuery('users', 'id', otherId, ['openid'])
-      console.log(2222, data);
+      onlyQueryResult[0].openid = my_crypto.aesDecrypt(onlyQueryResult[0].openid)
       request.post({
         url,
         body: {

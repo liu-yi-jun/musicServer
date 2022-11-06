@@ -5,6 +5,7 @@ let util = require('../util/util')
 let request = require('request');
 let accessToken = require('../util/access_token')
 let handleToken = require('../util/handleToken')
+let my_crypto = require('../util/my_crypto')
 
 router.get('/getInform', async (req, res, next) => {
   let { pageSize, pageIndex, userId } = req.query
@@ -21,6 +22,17 @@ router.get('/getInform', async (req, res, next) => {
     next(err)
   }
 })
+
+
+
+router.post('/readAllInform', async (req, res, next) => {
+  let { userId } = req.body
+  db.update('notice', { isNew: 0 }, { otherId: userId }).then(result => {
+    res.json(util.success(result))
+  }).catch(err => next(err))
+})
+
+
 
 function isLike (arr, userId) {
   return new Promise((resolve, reject) => {
@@ -78,29 +90,36 @@ router.post('/modifyInform', async (req, res, next) => {
 router.get('/noticeNumbe', async (req, res, next) => {
   let { userId } = req.query
   try {
-    let sql = `select COUNT(*) noticeNumbe from notice where otherId = ${userId} and isNew = 1`
-    let result = await db.coreQuery(sql)
-    res.json(util.success(result[0]))
+    let sql1 = `select COUNT(*) noticeNumbe from notice where otherId = ${userId} and isNew = 1`
+    let result1 = await db.coreQuery(sql1)
+
+    let sql2 = `select COUNT(*) noticeNumbe from finalsystem where otherId = ${userId} and isNew = 1`
+    let result2 = await db.coreQuery(sql2)
+    
+    let noticeNumbe = result1[0].noticeNumbe + result2[0].noticeNumbe
+
+    res.json(util.success(noticeNumbe))
   } catch (err) {
     next(err)
   }
 })
 
+
 router.post('/sendSubscribeInfo', async (req, res, next) => {
   let access_token = await accessToken.getAccessToken()
   let url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${access_token}`
-  let { userIdList, otherId, template_id, page = 'pages/home/home', data } = req.body
-  console.log(2222, data);
+  let { userIdList, otherId, template_id, page = 'pages/home/home', data, miniprogramState = 'formal' } = req.body
   if (!userIdList) {
     let onlyQueryResult = await db.onlyQuery('users', 'id', otherId, ['openid'])
-
+    onlyQueryResult[0].openid = my_crypto.aesDecrypt(onlyQueryResult[0].openid)
     request.post({
       url,
       body: {
         touser: onlyQueryResult[0].openid,
         template_id,
         "page": page,
-        "data": data
+        "data": data,
+        "miniprogramState": miniprogramState
       },
       json: true
     }, (err, response, body) => {
@@ -110,6 +129,7 @@ router.post('/sendSubscribeInfo', async (req, res, next) => {
   } else {
     userIdList.forEach((async item => {
       let onlyQueryResult = await db.onlyQuery('users', 'id', item.userId, ['openid'])
+      onlyQueryResult[0].openid = my_crypto.aesDecrypt(onlyQueryResult[0].openid)
       request.post({
         url,
         body: {

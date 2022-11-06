@@ -4,9 +4,9 @@ module.exports = {
   mysql: {
     host: 'www.shengruo.top',
     // host: 'localhost',
-    user: 'root',
+    user: 'eigene',
     // password: 'QFJP46zm',
-    password: 'root',
+    password: 'QFJP46zm',
     database: 'music',
     port: 3306
   },
@@ -18,6 +18,11 @@ module.exports = {
     appId: 'wxf38d23a046de6205',
     appSecret: '65e058e60a0f5e7c737426022a0b2dc2'
 
+  },
+  mp: {
+    token: 'test',
+    appId: 'wxab1b3884679a9fe5',
+    appSecret: '09eedbe028367092c3af0d09af071ba7'
   },
   resource: {
     baseUrl: "http://localhost:3000"
@@ -34,5 +39,8 @@ module.exports = {
     band: 'm1ULncMbn3rDVirXA_2-EoLHtmRWSsVc3Fg8NlCWW_s',
     joinGroup: 'gVM-0N8z4sipyh4riEaEUrSuRVusfgsfk6U3DrDV_-w',
     examine: 'HDFi5dRAZ-sWt-J7LJ6OR59Oc3hgAqtOTqyfosR3qX4',
+    forward: '-G-UDwc7TcN9fqymhEOQVyRKabgx0nt4M8BmW0BHSsA',
+    signIn: "Ca_xIYFYmajur3jRrlxqATJlBmA-Z1E8pu9IlyvLnIo",
+    follow: "FK_z03HLwu5lAtmwPxXd0wd81owIbs077fD0kVtpAec"
   }
 }

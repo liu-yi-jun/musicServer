@@ -75,7 +75,7 @@ router.post('/sendReply', async (req, res, next) => {
       replyContent: params.replyContent,
       releaseTime: params.releaseTime,
     })
-
+    await db.selfInOrDe(params.theme, 'comment', 'id', params.themeId, true)
     res.json(util.success(insertResult))
     // 消息
     if (params.noticeUserId !== params.replyPersonId) {
@@ -119,9 +119,14 @@ router.post('/sendReply', async (req, res, next) => {
 })
 router.post('/deletecomment', async (req, res, next) => {
   try {
-    let { id } = req.body
+    let { id, theme, themeId } = req.body
     let result = await db.deleteData(`comment`, { 'id': id })
     await db.deleteData(`reply`, { 'commentId': id })
+    let sql = `SELECT COUNT(id) total FROM reply WHERE commentId = ${id} `
+    let sum = await db.coreQuery(sql)
+    for (let i = 0; i < sum[0].total + 1; i++) {
+      db.selfInOrDe(theme, 'comment', 'id', themeId, false)
+    }
     res.json(util.success(result))
   } catch (err) {
     next(err)
@@ -129,8 +134,9 @@ router.post('/deletecomment', async (req, res, next) => {
 })
 router.post('/deletereply', async (req, res, next) => {
   try {
-    let { id } = req.body
+    let { id, theme, themeId } = req.body
     let result = await db.deleteData(`reply`, { 'id': id })
+    db.selfInOrDe(theme, 'comment', 'id', themeId, false)
     res.json(util.success(result))
   } catch (err) {
     next(err)

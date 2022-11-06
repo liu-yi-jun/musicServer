@@ -56,4 +56,40 @@ router.get('/getReport', async (req, res, next) => {
     next(err)
   }
 })
+
+router.get('/getUserList', async (req, res, next) => {
+  try {
+    let { page_size, page_index } = req.query
+    let sql1 = `SELECT * from users where nickName != '微信用户' ORDER BY id DESC LIMIT ${page_size} OFFSET ${page_size * (page_index - 1)}`
+
+    let userList = await db.coreQuery(sql1)
+    let sql2 = `SELECT COUNT(id) total FROM users where nickName != '微信用户'`
+    let sum = await db.coreQuery(sql2)
+    res.send({
+      userList,
+      total: sum[0].total
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+
+router.get('/signInList', async (req, res, next) => {
+  try {
+    let { page_size, page_index } = req.query
+    let sql1 = `SELECT * from signin AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${page_size} OFFSET ${page_size * (page_index - 1)}`
+    let signInList = await db.coreQuery(sql1)
+    let sql2 = `SELECT COUNT(id) total FROM signin`
+    let sum = await db.coreQuery(sql2)
+    res.send({
+      signInList,
+      total: sum[0].total
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+
 module.exports = router;

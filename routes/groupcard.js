@@ -12,6 +12,31 @@ router.post('/issueGroupCard', (req, res, next) => {
   db.insert('groupcard', params).then(result => res.json(util.success(result))).catch(err => next(err))
 })
 
+router.post('/cardDelete', async (req, res, next) => {
+  try {
+    let id = req.body.id
+    let beforeGroupcard = await db.onlyQuery('groupcard', 'id', id)
+    if(beforeGroupcard.length){
+      if(beforeGroupcard[0].datumUrls) util.deleteFiles(JSON.parse(beforeGroupcard[0].datumUrls))
+      if(beforeGroupcard[0].videoUrl) util.deleteFile(beforeGroupcard[0].videoUrl)
+    }
+    let beforeCardrecord= await db.onlyQuery('groupcardrecord', 'groupcardId', id)
+    if(beforeCardrecord.length){
+      beforeCardrecord.forEach(item=> {
+        if(item.recordUrl) util.deleteFile(item.recordUrl)
+      })  
+    }
+    await db.deleteData('groupcardrecord', { groupcardId: id })
+    let result = await db.deleteData('groupcard', { id })
+    res.json(util.success(result))
+  } catch (err) {
+    next(err)
+  }
+
+})
+
+
+
 router.get('/getPagingGroupCard', (req, res, next) => {
   let { pageSize, pageIndex, groupId, some } = req.query
   if (some) {

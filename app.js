@@ -6,7 +6,9 @@ let request = require('request');
 var logger = require('morgan');
 // 引入数据库操作
 var db = require('./db/db');
-
+// 邀请码
+global.codes = []
+global.applicants = []
 
 const jwt = require("jsonwebtoken")
 //撒盐，加密时候混淆
@@ -39,7 +41,9 @@ let bandMoment = require('./routes/bandMoment')
 let wx = require('./config/config').wx
 // 获取access_token
 let accessToken = require('./util/access_token')
+let mpAccess_token = require('./util/mpAccess_token')
 accessToken.start()
+mpAccess_token.start()
 
 
 const schedule = require('node-schedule');
@@ -51,6 +55,8 @@ const scheduleCronstyle = () => {
     db.coreQuery(sql1)
     let sql2 = "UPDATE signin SET everyday=1  where id < 100000"
     db.coreQuery(sql2)
+    global.codes = []
+    global.applicants = []
   });
 }
 
@@ -74,15 +80,27 @@ app.use(cookieParser());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 网站部分
+app.get('/',function(req,res){
+  res.redirect('/website');
+});
+
+
 // 后台部分
 var bc_usersRouter = require('./backRouters/bc_usersRouter');
 var bc_index = require('./backRouters/bc_index');
 app.use('/back/', bc_index)
 app.use('/back/user', bc_usersRouter);
 
+
+// 公众号部分
+var wc_index = require('./wechatRouters/wc_index');
+app.use('/wechat/', wc_index)
+
+
 // 验证token
 app.use((req, res, next) => {
-  console.log(req.urlm, 1111111)
+  console.log(req.url, 1111111)
   console.log(req.url.includes(handleToken.whiteList), handleToken.whiteList)
   if (req.url.includes(handleToken.whiteList) || req.url.includes('/api/group/simpleGroupInfo')) {
     next()

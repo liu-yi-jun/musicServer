@@ -44,9 +44,14 @@ router.post('/followSecond', async (req, res, next) => {
 
 router.get('/searchSeconds', async (req, res, next) => {
   try {
-    let { brand, pageSize, pageIndex, userId } = req.query
-    // let seconds = await db.vague('second', 'brand', brand, pageSize, pageIndex, ['id DESC'])
-    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from second  where brand like '%${brand}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let { brand, pageSize, pageIndex, userId,minID } = req.query
+    let sql
+    if(minID == 0) {
+      sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from second  where brand like '%${brand}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    }else {
+      sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from second  where brand like '%${brand}%')  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize}`
+    }
+
     let seconds = await db.coreQuery(sql)
     seconds = await db.isStore(seconds, 'secondstore', userId, 'secondId', (second) => {
       second.pictureUrls = JSON.parse(second.pictureUrls)
@@ -194,14 +199,13 @@ router.post('/secondDelete', async (req, res, next) => {
 router.get('/mySecond', async (req, res, next) => {
   try {
     let { pageSize, pageIndex, userId } = req.query
-    let sql = `SELECT * FROM second where userId = ${userId} ORDER BY id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
-    let second = await db.coreQuery(sql)
-    second.forEach(item => {
-      item.isStore = true
-      item.pictureUrls = JSON.parse(item.pictureUrls)
-      item.additional = util.cutstr(item.additional, 50)
+    let sql = `SELECT t1.* ,t2.nickName,t2.avatarUrl from (select * from second  where userId = ${userId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let seconds = await db.coreQuery(sql)
+    seconds = await db.isStore(seconds, 'secondstore', userId, 'secondId', (second) => {
+      second.pictureUrls = JSON.parse(second.pictureUrls)
+      second.additional = util.cutstr(second.additional, 50)
     })
-    return res.json(util.success(second))
+    return res.json(util.success(seconds))
   } catch (err) {
     next(err)
   }

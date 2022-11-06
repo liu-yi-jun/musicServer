@@ -61,6 +61,10 @@ router.post('/groupCardRecordLike', (req, res, next) => {
 router.post('/deleteGroupCardRecord', async (req, res, next) => {
   try {
     let { id } = req.body
+    let beforecardrecord = await db.onlyQuery('groupcardrecord', 'id', id)
+    if(beforecardrecord.length){
+       util.deleteFile(beforecardrecord[0].recordUrl)
+    }
     let result = await db.deleteData(`groupcardrecord`, { 'id': id })
     res.json(util.success(result))
   } catch (err) {

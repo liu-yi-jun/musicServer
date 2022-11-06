@@ -22,16 +22,25 @@ router.post('/saveTeam', (req, res, next) => {
   }
   db.update('band', modifys, { id: params.themeId }).then(result => res.json(util.success(result))).catch(err => next(err))
 })
-router.get('/getBands', (req, res, ext) => {
-  let { pageSize, pageIndex } = req.query
-  let some = ['id', 'userId', 'groupName', 'existArr', 'recruitArr', 'introduce', 'title']
-  db.paging('band', pageSize, pageIndex, {}, ['id DESC'], some).then(result => {
-    result.forEach(element => {
-      element.existArr = JSON.parse(element.existArr)
-      element.recruitArr = JSON.parse(element.recruitArr)
-    });
-    res.json(util.success(result))
-  }).catch(err => next(err))
+router.get('/getBands', async (req, res, ext) => {
+  let { pageSize, pageIndex ,minID} = req.query
+  try {
+    let sql 
+    if(minID == 0) {
+      sql = `SELECT t1.id,t1.userId,t1.groupName,t1.existArr,t1.recruitArr,t1.introduce,t1.title from (select * from band )  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    }else {
+      sql = `SELECT t1.id,t1.userId,t1.groupName,t1.existArr,t1.recruitArr,t1.introduce,t1.title from (select * from band )  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize}`
+    }
+   
+    let bands = await db.coreQuery(sql)
+    bands.forEach(item => {
+      item.existArr = JSON.parse(item.existArr)
+      item.recruitArr = JSON.parse(item.recruitArr)
+    })
+    res.json(util.success(bands))
+  } catch (err) {
+    next(err)
+  }
 })
 
 router.post('/joinBand', (req, res, next) => {

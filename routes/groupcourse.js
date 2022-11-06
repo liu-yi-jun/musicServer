@@ -12,20 +12,58 @@ router.post('/addCourse', (req, res, next) => {
   db.insert('groupcourse', params).then(result => res.json(util.success(result))).catch(err => next(err))
 })
 
+router.post('/saveCourse',async (req, res, next) => {
+  let params = req.body.params
+  let id = req.body.id
+  
+  let beforeCourse = await db.onlyQuery('groupcourse', 'id', id)
+  if(beforeCourse.length){
+    if(beforeCourse[0].pictureUrls){
+      let beforePictureUrls = JSON.parse(beforeCourse[0].pictureUrls)
+      beforePictureUrls.forEach(beforeUrl => {
+        let exist = false
+        params.pictureUrls.forEach(newUrl=> {
+          if(beforeUrl === newUrl) {
+            exist = true
+          }
+        })
+        if(!exist) {
+          util.deleteFile(beforeUrl)
+        }
+      });
+    } 
+    if(beforeCourse[0].videoUrl !== params.videoUrl) util.deleteFile(beforeCourse[0].videoUrl)
+    if(beforeCourse[0].posterUrl !== params.posterUrl) util.deleteFile(beforeCourse[0].posterUrl)
+    params.pictureUrls = JSON.stringify(params.pictureUrls)
+  }
+  db.update('groupcourse', params, { id }).then(result => res.json(util.success(result))).catch(err => next(err))
+})
+
+
+
 router.get('/getCourses', (req, res, next) => {
-  let { pageSize, pageIndex, groupId } = req.query
-  let sql = `SELECT t1.id, t1.groupId,t1.groupName,t1.userId,t1.courseName,t1.posterUrl,t1.views,t1.store,t2.avatarUrl,t2.nickName from (select * from groupcourse where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+  let { pageSize, pageIndex, groupId, minID } = req.query
+  let sql
+  if (minID == 0) {
+    sql = `SELECT t1.id, t1.groupId,t1.groupName,t1.userId,t1.courseName,t1.posterUrl,t1.views,t1.store,t2.avatarUrl,t2.nickName from (select * from groupcourse where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+  } else {
+    sql = `SELECT t1.id, t1.groupId,t1.groupName,t1.userId,t1.courseName,t1.posterUrl,t1.views,t1.store,t2.avatarUrl,t2.nickName from (select * from groupcourse where groupId=${groupId})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize} `
+  }
+
   db.coreQuery(sql).then(result => {
     res.json(util.success(result))
   }).catch(err => next(err))
 })
 
+
 router.get('/courseDetail', async (req, res, next) => {
   try {
     let id = req.query.id
     let userId = req.query.userId
-    let sql = `SELECT t1.*, t2.avatarUrl from (select * from groupcourse where id=${id})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id`
+    let sql = `SELECT t1.*, t2.avatarUrl,t2.nickName from (select * from groupcourse where id=${id})  AS t1 INNER JOIN users t2 ON t1.userId = t2.id`
     let result = await db.coreQuery(sql)
+    let multipleQuery = await db.multipleQuery('userfollow', { otherId: result[0].userId, userId })
+    multipleQuery.length ? result[0].isFollow = true : result[0].isFollow = false
     db.selfInOrDe('groupcourse', 'views', 'id', id, true)
     result[0].releaseTime = util.handleDate(result[0].releaseTime)
     result[0].pictureUrls = JSON.parse(result[0].pictureUrls)
@@ -118,6 +156,12 @@ router.post('/groupcourseStore', (req, res, next) => {
 router.post('/groupcourseDelete', async (req, res, next) => {
   try {
     const { id, tableName } = req.body
+    let beforeCourse = await db.onlyQuery(tableName, 'id', id)
+    if(beforeCourse.length){
+      if(beforeCourse[0].pictureUrls) util.deleteFiles(JSON.parse(beforeCourse[0].pictureUrls))
+      if(beforeCourse[0].videoUrl) util.deleteFile(beforeCourse[0].videoUrl)
+      if(beforeCourse[0].posterUrl) util.deleteFile(beforeCourse[0].posterUrl)
+    }
     let result = await db.deleteData(tableName, { id })
     await db.deleteData('comment', { theme: tableName, themeId: id })
     res.send(util.success(result))

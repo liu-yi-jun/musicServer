@@ -4,13 +4,10 @@ var db = require('../db/db');
 let util = require('../util/util')
 let request = require('request');
 let wx = require('../config/config').wx
-const crypto = require('crypto');
+const my_crypto = require('../util/my_crypto')
 let handleToken = require('../util/handleToken')
-
-function hmac (data) {
-  let hmac = crypto.createHmac('md5', 'liuyijun');
-  return hmac.update(data).digest('hex');
-}
+var WXBizDataCrypt = require('../util/WXBizDataCrypt')
+const subscribe = require('../util/subscribe');
 
 router.get('/getToken', (req, res, next) => {
   let code = req.query.code
@@ -18,8 +15,9 @@ router.get('/getToken', (req, res, next) => {
   request(sessionUrl, async (err, response, body) => {
     let data = JSON.parse(body);
     if (data.errmsg) return res.json(util.fail(data.errmsg))
+
     try {
-      // data.openid = hmac(data.openid);
+      data.openid = my_crypto.aesEncrypt(data.openid)
       let token = handleToken.createToken({
         openid: data.openid,
         session_key: data.session_key
@@ -35,8 +33,11 @@ router.get('/getServerUserInfo', (req, res, next) => {
   try {
     handleToken.verifyToken(req.headers.token).then(async info => {
       let openid = info.openid
+      // let openid = 'da694b9d14e6300514b3e5a2025a5f1bc111883a1f538b1860b0c34ae197faa4'
       let result = await queryUser(openid)
-
+      if (!result.userInfo) return res.json(util.success(result))
+      let myGrouList = await db.onlyQuery('manygroups', 'userId', result.userInfo.id)
+      result.myGrouList = myGrouList
       return res.json(util.success(result))
     })
   } catch (err) {
@@ -49,6 +50,8 @@ router.get('/simpleGetServerUserInfo', (req, res, next) => {
     handleToken.verifyToken(req.headers.token).then(async info => {
       let openid = info.openid
       let result = await queryUser(openid)
+      if (!result.userInfo) return res.json(util.success(result))
+
       let myGrouList = await db.onlyQuery('manygroups', 'userId', result.userInfo.id)
       result.myGrouList = myGrouList
       return res.json(util.success(result))
@@ -119,12 +122,17 @@ function queryUser (openid) {
 }
 
 router.post('/register', async (req, res, next) => {
+  let { encryptedData, iv, userInfo, codeCheck } = req.body
   try {
     handleToken.verifyToken(req.headers.token).then(async info => {
       let openid = info.openid
-      let userInfo = req.body.userInfo
+      let session_key = info.session_key
       let result = await queryUser(openid)
       if (!result.userInfo) {
+        // var pc = new WXBizDataCrypt(wx.appId, session_key)
+        // var data = pc.decryptData(encryptedData, iv)
+        // console.log('解密出来', data);
+        userInfo.codeCheck = codeCheck
         await insertUser(openid, userInfo)
         result = await queryUser(openid)
       }
@@ -137,9 +145,9 @@ router.post('/register', async (req, res, next) => {
 function insertUser (openid, userInfo) {
   return new Promise((resolve, reject) => {
     if (!userInfo) return reject('无法获取用户初始数据')
-    let { nickName, gender, avatarUrl } = userInfo
-    let sql = "INSERT INTO users (nickName, avatarUrl, gender,openid) VALUES(?, ?, ?, ?); "
-    let params = [nickName, avatarUrl, gender, openid]
+    let { nickName, gender, avatarUrl, codeCheck = undefined } = userInfo
+    let sql = "INSERT INTO users (nickName, avatarUrl, gender,openid,codeCheck) VALUES(?, ?, ?, ?,?); "
+    let params = [nickName, avatarUrl, gender, openid, codeCheck]
     db.commonQuery(sql, params, (err, result) => {
       console.log('insertUser', err, result)
       if (err) {
@@ -152,12 +160,16 @@ function insertUser (openid, userInfo) {
   })
 }
 
-router.post('/changeBgWall', (req, res, next) => {
+router.post('/changeBgWall', async (req, res, next) => {
   let { userId, bgWall } = req.body
   let modifys = {
     bgWall
   }, conditions = {
     id: userId
+  }
+  let beforeUsers = await db.onlyQuery('users', 'id', userId)
+  if(beforeUsers.length){
+    if(beforeUsers[0].bgWall !== bgWall) util.deleteFile(beforeUsers[0].bgWall)
   }
   db.update('users', modifys, conditions).then(result => res.json(util.success(result))).catch(err => next(err))
 })
@@ -174,6 +186,10 @@ router.post('/updateUserInfo', async (req, res, next) => {
       gender
     }, conditions = {
       id: userId
+    }
+    let beforeUsers = await db.onlyQuery('users', 'id', userId)
+    if(beforeUsers.length){
+      if(beforeUsers[0].avatarUrl !== avatarUrl) util.deleteFile(beforeUsers[0].avatarUrl)
     }
     let updateResult = await db.update('users', modifys, conditions)
     let onlyQueryResult = await db.onlyQuery('users', 'id', userId)
@@ -277,6 +293,12 @@ router.get('/personalInvitatio', async (req, res, next) => {
   let { id, userId } = req.query
   try {
     let personal = await db.onlyQuery('users', 'id', id)
+    let sql1 =  `select COUNT(*) fanNumber  from userfollow where  otherId = ${id}`
+    let sql2 =  `select COUNT(*) followNumber  from userfollow where  userId = ${id}`
+    let fans = await db.coreQuery(sql1)
+    let follows = await db.coreQuery(sql2)
+    personal[0].fans  = fans[0].fanNumber
+    personal[0].follows = follows[0].followNumber
     let multipleQuery = await db.multipleQuery('userfollow', { otherId: id, userId })
     multipleQuery.length ? personal[0].isFollow = true : personal[0].isFollow = false
     return res.json(util.success(personal))
@@ -290,6 +312,7 @@ router.post('/followUser', async (req, res, next) => {
   try {
     let relation = req.body.relation
     let operate = req.body.operate
+    let extra = req.body.extra
     let data = {
       mainTable: {
         name: 'users',
@@ -302,8 +325,25 @@ router.post('/followUser', async (req, res, next) => {
       },
       operate
     }
-
     let result = await db.operateLSF(data, () => {
+      subscribe.sendSubscribeInfo({
+        otherId: relation.otherId,
+        template_id: subscribe.InfoId.follow,
+        "data": {
+          "name1": {
+            "value": util.cutstr(extra.nickName, 16)
+          },
+          "thing3": {
+            "value": '有新的朋友关注您, 快来看看'
+          }
+        }
+      })
+      extra = {}
+      extra.otherId = relation.otherId
+      extra.userId = relation.userId
+      extra.isNew = 1
+      extra.type = 3
+      db.insert('notice', extra)
       return db.selfInOrDe(data.mainTable.name, 'fans', 'id', relation.otherId, true)
     }, () => {
       return db.selfInOrDe(data.mainTable.name, 'fans', 'id', relation.otherId, false)
@@ -368,4 +408,39 @@ router.get('/getUserFan', async (req, res, next) => {
     next(err)
   }
 })
+
+router.post('/generateCode', async (req, res, next) => {
+  let { userId } = req.body
+  try {
+    let result = await db.onlyQuery('invitation', 'userId', userId)
+    if (result.length) {
+      // 存在
+      return res.json(util.success(result[0].code))
+    } else {
+      // 不存在，生成
+      let code = await generateCode(8)
+      db.insert('invitation', { userId, code })
+      return res.json(util.success(code))
+    }
+
+  } catch (err) {
+    next(err)
+  }
+})
+
+
+function generateCode (number) {
+  return new Promise(async (resolve, reject) => {
+    let code = util.createCode(number)
+    let result = await db.onlyQuery('invitation', 'code', code)
+    if (result.length) {
+      return resolve(await generateCode(number))
+    } else {
+      return resolve(code)
+      // 不存在，生成
+    }
+  })
+}
+
+
 module.exports = router;

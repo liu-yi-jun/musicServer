@@ -272,8 +272,6 @@ module.exports = {
       module.exports.coreQuery(sql, sqlParams).then(res => resolve(res)).catch(err => reject(err))
     })
   },
-
-
   // 删除
   deleteData (table, conditions) {
     let conditionsKey = [], conditionsValue = []
@@ -361,7 +359,8 @@ module.exports = {
           return resolve(commentArr)
         }
         commentArr.forEach((comment, index) => {
-          let sql = `SELECT t3.* ,t4.nickName parentName,t4.avatarUrl parentAvatar from (SELECT t1.id,t1.commentId,t1.parentReplyId,t1.replyPersonId,t1.replyContent,t1.releaseTime,t2.nickName replyPersonName,t2.avatarUrl replyPersonAvatar from (select * from reply where commentId=${comment.id})  AS t1 INNER JOIN users t2 ON t1.replyPersonId = t2.id) AS t3 left JOIN users t4 ON t3.parentReplyId = t4.id ORDER BY t3.id DESC`
+          // let sql = `SELECT t3.* ,t4.nickName parentName,t4.avatarUrl parentAvatar from (SELECT t1.id,t1.commentId,t1.parentReplyId,t1.replyPersonId,t1.replyContent,t1.releaseTime,t2.nickName replyPersonName,t2.avatarUrl replyPersonAvatar from (select * from reply where commentId=${comment.id})  AS t1 INNER JOIN users t2 ON t1.replyPersonId = t2.id) AS t3 left JOIN users t4 ON t3.parentReplyId = t4.id ORDER BY t3.id DESC`
+          let sql = `SELECT t3.* ,t4.nickName parentName,t4.avatarUrl parentAvatar from (SELECT t1.id,t1.commentId,t1.parentReplyId,t1.replyPersonId,t1.replyContent,t1.releaseTime,t2.nickName replyPersonName,t2.avatarUrl replyPersonAvatar from (select * from reply where commentId=${comment.id})  AS t1 INNER JOIN users t2 ON t1.replyPersonId = t2.id) AS t3 left JOIN users t4 ON t3.parentReplyId = t4.id `
           // let commentArr = module.exports.coreQuery(sql)
           // p = p.then(() => module.exports.onlyQuery('reply', 'commentId', comment.id, false, 'ORDER BY id DESC')).then(result => {
           p = p.then(() => module.exports.coreQuery(sql)).then(result => {

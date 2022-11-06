@@ -9,15 +9,40 @@ router.post('/postAlliance', (req, res, next) => {
   console.log(req.body)
   let params = req.body
   params.pictureUrls = JSON.stringify(params.pictureUrls)
+  params.timeStamp = new Date(params.timeStamp).getTime()
+  params.endTimeStamp = new Date(params.endTimeStamp).getTime()
   params.releaseTime = Date.now()
   db.insert('alliance', params).then(result => res.json(util.success(result))).catch(err => next(err))
 })
 router.get('/getAlliance', async (req, res, next) => {
+  let { pageSize, pageIndex,minID } = req.query
+  try {
+    let sql 
+    if(minID == 0) {
+      sql = `SELECT t1.id, t1.userId,t1.title,t1.pictureUrls,t1.groupId,t1.activityTime,t1.organization,t1.groupName,t2.nickName,t2.avatarUrl from (select * from alliance)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    }else {
+      sql = `SELECT t1.id, t1.userId,t1.title,t1.pictureUrls,t1.groupId,t1.activityTime,t1.organization,t1.groupName,t2.nickName,t2.avatarUrl from (select * from alliance)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.id < ${minID} ORDER BY t1.id DESC LIMIT ${pageSize}`
+    }
+
+    let alliances = await db.coreQuery(sql)
+
+    if (!alliances.length) {
+      return res.json(util.success([]))
+    }
+    alliances.forEach(element => {
+      element.pictureUrls = JSON.parse(element.pictureUrls)
+    });
+    return res.json(util.success(alliances))
+
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/getSimpleAlliance', async (req, res, next) => {
   let { pageSize, pageIndex } = req.query
   try {
-    // let some = ['id', 'userId', 'title', 'pictureUrls', 'groupId', 'activityTime', 'organization', 'groupName', 'nickName', 'avatarUrl']
-    // let alliances = await db.paging('alliance', pageSize, pageIndex, {}, ['id DESC'], some)
-    let sql = `SELECT t1.id, t1.userId,t1.title,t1.pictureUrls,t1.groupId,t1.activityTime,t1.organization,t1.groupName,t2.nickName,t2.avatarUrl from (select * from alliance)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
+    let sql = `SELECT t1.id, t1.userId,t1.title,t1.pictureUrls,t1.groupId,t1.activityTime,t1.organization,t1.groupName,t1.activityLocation,t1.timeStamp,t2.nickName,t2.avatarUrl from (select * from alliance)  AS t1 INNER JOIN users t2 ON t1.userId = t2.id where t1.endTimeStamp >= ${new Date().getTime()}  ORDER BY t1.id DESC LIMIT ${pageSize} OFFSET ${pageSize * (pageIndex - 1)}`
     let alliances = await db.coreQuery(sql)
 
     if (!alliances.length) {

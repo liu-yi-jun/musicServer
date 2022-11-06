@@ -1,25 +1,27 @@
 /**
  * 公共函数定义
  */
-
+const fs = require('fs');
 let createHash = require('create-hash');
+var baseUrl = require('../config/config').resource.baseUrl;
+var path = require('path')
 module.exports = {
   // 生成随机数
-  createNonceStr () {
+  createNonceStr() {
     return Math.random().toString(36).substr(2, 15);
   },
   // 生成时间戳
-  createTimeStamp () {
+  createTimeStamp() {
     return parseInt(new Date().getTime() / 1000) + ''
   },
   // 生成签名
-  getSign (params, key) {
+  getSign(params, key) {
     let string = this.raw(params) + '&key=' + key;
     let sign = createHash('md5').update(string).digest('hex');
     return sign.toUpperCase();
   },
   // 生成系统的交易订单号
-  getTradeId (type = 'wx') {
+  getTradeId(type = 'wx') {
     let date = new Date().getTime().toString();
     let text = '';
     let possible = '0123456789';
@@ -29,7 +31,7 @@ module.exports = {
     return (type == 'wx' ? 'ImoocWxJuZi' : 'ImoocMpJuZi') + date + text;
   },
   // Object 转换成json并排序
-  raw (args) {
+  raw(args) {
     let keys = Object.keys(args).sort();
     let obj = {};
     keys.forEach((key) => {
@@ -56,8 +58,8 @@ module.exports = {
   //     return this.fail(err);
   //   }
   // },
-  add0 (m) { return m < 10 ? '0' + m : m },
-  format (shijianchuo) {
+  add0(m) { return m < 10 ? '0' + m : m },
+  format(shijianchuo) {
     //shijianchuo是整数，否则要parseInt转换
     var time = new Date(shijianchuo);
     var y = time.getFullYear();
@@ -69,7 +71,7 @@ module.exports = {
     // return y+'-'+add0(m)+'-'+add0(d)+' '+add0(h)+':'+add0(mm)+':'+add0(s);
     return y + '-' + this.add0(m) + '-' + this.add0(d);
   },
-  handleDate (stamp) {
+  handleDate(stamp) {
     var time = new Date(stamp);
     var y = time.getFullYear();
     var m = time.getMonth() + 1;
@@ -79,21 +81,21 @@ module.exports = {
     var s = time.getSeconds();
     return `${y}-${this.add0(m)}-${this.add0(d)} ${this.add0(h)}:${this.add0(mm)}`
   },
-  success (data = {}, message) {
+  success(data = {}, message) {
     return {
       code: 0,
       data,
       message: JSON.stringify(message)
     }
   },
-  fail (message = '') {
+  fail(message = '') {
     return {
       code: -1,
       message: JSON.stringify(message)
     }
   },
   // JS字符串长度判断,超出进行自动截取(支持中文)
-  cutstr (str, len) {
+  cutstr(str, len) {
     if (!str) return str
     var str_length = 0;
     var str_len = 0;
@@ -117,7 +119,7 @@ module.exports = {
       return str;
     }
   },
-  getDateDiff (dateTimeStamp) {
+  getDateDiff(dateTimeStamp) {
     if (typeof dateTimeStamp === "string") {
       return dateTimeStamp
     }
@@ -152,5 +154,50 @@ module.exports = {
     } else
       result = "刚刚";
     return result;
+  },
+  createCode(codeLength = 6) {
+    code = "";
+    //验证码的长度
+    var codeChars = new Array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'); //所有候选组成验证码的字符，当然也可以用中文的
+    for (var i = 0; i < codeLength; i++) {
+      var charNum = Math.floor(Math.random() * 52);
+      code += codeChars[charNum];
+    }
+    return code
+  },
+  deleteFile(delPath) {
+    let matching = ''
+    if (delPath.includes('image')) matching = 'image';
+    if (delPath.includes('voice')) matching = 'voice';
+    if (delPath.includes('video')) matching = 'video';
+
+    if (matching) {
+      delPath =
+        path.join(__dirname, `/../public/${matching + delPath.split(matching)[1]}`);
+    }
+    if (matching === 'video' && !delPath.includes('jpg')) {
+      module.exports.deleteFile(delPath.split('.')[0] + '.jpg')
+    }
+    try {
+      if (fs.existsSync(delPath)) {
+        fs.unlink(delPath, () => {
+
+        })
+      } else {
+        console.log('inexistence path：', delPath);
+      }
+    } catch (error) {
+      console.log('del error', error);
+    }
+  },
+  deleteFiles(delPaths) {
+    if (Array.isArray(delPaths)) {
+      delPaths.forEach(delPath => {
+        module.exports.deleteFile(delPath)
+      })
+    }
+
   }
 }
